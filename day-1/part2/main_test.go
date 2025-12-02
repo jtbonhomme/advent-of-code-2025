@@ -146,6 +146,7 @@ func TestComputeNewDial(t *testing.T) {
 			want: result{newDial: 0, zero: 1},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if dial, zero := computeNewDial(tt.args.currentDial, tt.args.i, tt.args.dist); dial != tt.want.newDial || zero != tt.want.zero {
