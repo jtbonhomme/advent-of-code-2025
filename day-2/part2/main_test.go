@@ -25,58 +25,18 @@ func TestCountInvalidIDsInRange(t *testing.T) {
 		{
 			name: "Test 1",
 			args: args{
-				low:  95,
-				high: 115,
+				low:  1188511880,
+				high: 1188511890,
 			},
-			want: 99,
+			want: 1188511885,
 		},
 		{
 			name: "Test 2",
 			args: args{
-				low:  998,
-				high: 1012,
+				low:  112112111,
+				high: 112112113,
 			},
-			want: 1010,
-		},
-		{
-			name: "Test 3",
-			args: args{
-				low:  998,
-				high: 1112,
-			},
-			want: 2121,
-		},
-		{
-			name: "Test 4",
-			args: args{
-				low:  998,
-				high: 2021,
-			},
-			want: 16665,
-		},
-		{
-			name: "Test 5",
-			args: args{
-				low:  111,
-				high: 999,
-			},
-			want: 0,
-		},
-		{
-			name: "Test 6",
-			args: args{
-				low:  123122,
-				high: 123124,
-			},
-			want: 123123,
-		},
-		{
-			name: "Test 7",
-			args: args{
-				low:  38593856,
-				high: 38593862,
-			},
-			want: 38593859,
+			want: 112112112,
 		},
 	}
 
