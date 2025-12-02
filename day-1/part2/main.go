@@ -27,31 +27,23 @@ func parseLine(line string) (int, int) {
 	return i, dist
 }
 
-func computeNewDial(currentDial int, i int, dist int) (int, int) {
+func computeNewDial(currentDial int, dir int, dist int) (int, int) {
 	zero := 0
-
-	if dist > 99 {
-		zero += dist / 100
-		dist = dist % 100
+	dial := currentDial
+	for i := 0; i < dist; i++ {
+		dial += dir
+		if dial == 100 {
+			dial = 0
+		}
+		if dial == -1 {
+			dial = 99
+		}
+		if dial == 0 {
+			zero++
+		}
 	}
 
-	newDial := currentDial + (i * dist)
-
-	if newDial > 99 {
-		newDial -= 100
-		zero++
-	}
-	if newDial < 0 && currentDial != 0 {
-		zero++
-	}
-	if newDial < 0 {
-		newDial += 100
-	}
-	if newDial == 0 && i == -1 {
-		zero++
-	}
-
-	return newDial, zero
+	return dial, zero
 }
 
 func run(i string) int {

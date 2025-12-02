@@ -20,6 +20,15 @@ func TestComputeNewDial(t *testing.T) {
 		want result
 	}{
 		{
+			name: "Test 0",
+			args: args{
+				currentDial: 0,
+				i:           -1,
+				dist:        252,
+			},
+			want: result{newDial: 48, zero: 2},
+		},
+		{
 			name: "Test 1",
 			args: args{
 				currentDial: 50,
