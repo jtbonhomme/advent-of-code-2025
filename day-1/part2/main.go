@@ -64,15 +64,13 @@ func run(i string) int {
 		i, dist := parseLine(line)
 
 		dial, zero = computeNewDial(dial, i, dist)
+		answer += zero
 
 		if dial < 0 || dial > 99 {
 			panic("dial out of bounds")
 		}
 		fmt.Println("dial:", dial)
 		fmt.Println("zero:", zero)
-		if dial == 0 {
-			answer += zero
-		}
 	}
 
 	return answer
