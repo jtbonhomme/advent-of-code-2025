@@ -30,6 +30,7 @@ func parseLine(line string) (int, int) {
 func computeNewDial(currentDial int, dir int, dist int) (int, int) {
 	zero := 0
 	dial := currentDial
+	fmt.Printf("%d ", dial)
 	for i := 0; i < dist; i++ {
 		dial += dir
 		if dial == 100 {
@@ -38,10 +39,15 @@ func computeNewDial(currentDial int, dir int, dist int) (int, int) {
 		if dial == -1 {
 			dial = 99
 		}
+
+		fmt.Printf("%d ", dial)
 		if dial == 0 {
 			zero++
+			fmt.Printf("* ")
 		}
 	}
+
+	fmt.Println("")
 
 	return dial, zero
 }
