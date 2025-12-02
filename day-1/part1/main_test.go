@@ -42,6 +42,33 @@ func TestComputeNewDial(t *testing.T) {
 			},
 			want: 90,
 		},
+		{
+			name: "Test 4",
+			args: args{
+				currentDial: 99,
+				i:           1,
+				dist:        1,
+			},
+			want: 0,
+		},
+		{
+			name: "Test 5",
+			args: args{
+				currentDial: 5,
+				i:           -1,
+				dist:        10,
+			},
+			want: 95,
+		},
+		{
+			name: "Test 5",
+			args: args{
+				currentDial: 95,
+				i:           1,
+				dist:        5,
+			},
+			want: 0,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

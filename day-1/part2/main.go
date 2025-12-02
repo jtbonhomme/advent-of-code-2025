@@ -27,21 +27,35 @@ func parseLine(line string) (int, int) {
 	return i, dist
 }
 
-func computeNewDial(currentDial int, i int, dist int) int {
+func computeNewDial(currentDial int, i int, dist int) (int, int) {
+	zero := 0
+
+	if dist > 99 {
+		zero += dist / 100
+		dist = dist % 100
+	}
+
 	newDial := currentDial + (i * dist)
 
 	if newDial > 99 {
 		newDial -= 100
+		zero++
+	}
+	if newDial < 0 && currentDial != 0 {
+		zero++
 	}
 	if newDial < 0 {
 		newDial += 100
 	}
+	if newDial == 0 && i == -1 {
+		zero++
+	}
 
-	return newDial
+	return newDial, zero
 }
 
 func run(i string) int {
-	var answer int
+	var answer, zero int
 	var dial int = 50
 
 	fmt.Println("dial: ", dial)
@@ -51,12 +65,15 @@ func run(i string) int {
 		line := scanner.Text()
 		i, dist := parseLine(line)
 
-		dist = dist % 100
-		dial = computeNewDial(dial, i, dist)
+		dial, zero = computeNewDial(dial, i, dist)
 
+		if dial < 0 || dial > 99 {
+			panic("dial out of bounds")
+		}
 		fmt.Println("dial:", dial)
+		fmt.Println("zero:", zero)
 		if dial == 0 {
-			answer++
+			answer += zero
 		}
 	}
 
