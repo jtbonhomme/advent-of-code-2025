@@ -1,0 +1,59 @@
+package main
+
+import (
+	"testing"
+)
+
+func TestParseLine(t *testing.T) {
+	type args struct {
+		line string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []int
+	}{
+		{
+			name: "Test 0",
+			args: args{
+				line: "",
+			},
+			want: []int{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseLine(tt.args.line)
+			if !equalSlices(got, tt.want) {
+				t.Errorf("%s parseLine(%v) = %v, want %v", tt.name, tt.args.line, got, tt.want)
+			}
+		})
+	}
+}
+
+var textGrid = ``
+
+func TestParseLines(t *testing.T) {
+	want := [][]int{
+		{},
+	}
+
+	got := parseLines(textGrid)
+	for i := range want {
+		if !equalSlices(got[i], want[i]) {
+			t.Errorf("parseLines() line %d = %v, want %v", i, got[i], want[i])
+		}
+	}
+}
+
+func equalSlices(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}

@@ -17,17 +17,28 @@ func parseLine(line string) string {
 	return line
 }
 
-func run(i string) int {
-	var answer int
-
+func parseLines(i string) []int {
+	res := []int{}
 	scanner := bufio.NewScanner(strings.NewReader(i))
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		res := parseLine(line)
-		fmt.Println(res)
-		answer++
+		_ = parseLine(line)
 	}
+
+	return res
+}
+
+func processLines(lines []int) int {
+	var result int
+
+	return result
+}
+
+func run(i string) int {
+	lines := parseLines(i)
+
+	answer := processLines(lines)
 
 	return answer
 }
