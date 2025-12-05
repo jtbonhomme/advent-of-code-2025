@@ -18,7 +18,7 @@ func TestParseRangeLine(t *testing.T) {
 			args: args{
 				line: "1-3",
 			},
-			want: []int{1, 2, 3},
+			want: []int{1, 3},
 		},
 	}
 	for _, tt := range tests {
@@ -75,18 +75,21 @@ func TestParseLines(t *testing.T) {
 	wantIDs := []int{
 		1, 5, 8, 11, 17, 32,
 	}
-	wantRanges := []int{
-		3, 4, 5,
-		10, 11, 12, 13, 14, 16, 17, 18, 19, 20,
-		12, 13, 14, 15, 16, 17, 18,
+	wantRanges := [][]int{
+		{3, 5},
+		{10, 14},
+		{16, 20},
+		{12, 18},
 	}
 
 	gotFreshIDs, gotProductIDs := parseLines(textGrid)
 	if !equalSlices(gotProductIDs, wantIDs) {
 		t.Errorf("parseLines() got ids %v want %v", gotProductIDs, wantIDs)
 	}
-	if !equalSlices(gotFreshIDs, wantRanges) {
-		t.Errorf("parseLines() got ranges %v want %v", gotFreshIDs, wantRanges)
+	for i, r := range gotFreshIDs {
+		if !equalSlices(r, wantRanges[i]) {
+			t.Errorf("parseLines() got range %v want %v", r, wantRanges[i])
+		}
 	}
 }
 

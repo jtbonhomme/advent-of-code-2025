@@ -14,18 +14,15 @@ import (
 var input string
 
 func parseRangeLine(line string) []int {
-	rangeIDs := []int{}
 	// split around '-'
 	parts := strings.Split(line, "-")
 	if len(parts) != 2 {
-		return rangeIDs
+		return []int{}
 	}
 	startID, _ := strconv.Atoi(parts[0])
 	endID, _ := strconv.Atoi(parts[1])
-	for id := startID; id <= endID; id++ {
-		rangeIDs = append(rangeIDs, id)
-	}
-	return rangeIDs
+
+	return []int{startID, endID}
 }
 
 func parseProductIDLine(line string) int {
@@ -34,10 +31,11 @@ func parseProductIDLine(line string) int {
 	return id
 }
 
-// parse input tests
-func parseLines(i string) ([]int, []int) {
+// parse input lines
+// returns freshIDs, productIDs
+func parseLines(i string) ([][]int, []int) {
 	productIDs := []int{}
-	freshIDs := []int{}
+	freshIDs := [][]int{}
 
 	scanner := bufio.NewScanner(strings.NewReader(i))
 
@@ -54,7 +52,7 @@ func parseLines(i string) ([]int, []int) {
 			productIDs = append(productIDs, id)
 		} else {
 			rangeIDs := parseRangeLine(line)
-			freshIDs = append(freshIDs, rangeIDs...)
+			freshIDs = append(freshIDs, rangeIDs)
 		}
 	}
 
@@ -62,12 +60,12 @@ func parseLines(i string) ([]int, []int) {
 }
 
 // returns number of fresh products
-func processLines(freshIDs []int, availableProductIDs []int) int {
+func processLines(freshIDs [][]int, availableProductIDs []int) int {
 	var result int
 
 	for _, id := range availableProductIDs {
 		for _, freshID := range freshIDs {
-			if id == freshID {
+			if id >= freshID[0] && id <= freshID[1] {
 				result++
 				break
 			}
