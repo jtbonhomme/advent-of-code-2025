@@ -4,6 +4,7 @@ import (
 	"bufio"
 	_ "embed"
 	"fmt"
+	"sort"
 	"strconv"
 
 	//    "regexp"
@@ -72,6 +73,16 @@ func parseLines(i string) []*JunctionBox {
 }
 
 func areConnected(jb1, jb2 *JunctionBox) bool {
+	for _, conn := range jb1.Connections {
+		if conn == jb2 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func areInSameCircuit(jb1, jb2 *JunctionBox) bool {
 	visited := make(map[*JunctionBox]bool)
 
 	var dfs func(jb *JunctionBox)
@@ -116,6 +127,23 @@ func connectTogether(jb1, jb2 *JunctionBox) {
 	}
 }
 
+func findAllDistances(jbs []*JunctionBox) map[int][]*JunctionBox {
+	dists := make(map[int][]*JunctionBox)
+
+	for _, jb := range jbs {
+		for _, otherJb := range jbs {
+			if equalPosition(jb.Position, otherJb.Position) {
+				continue
+			}
+
+			dist := sqrDist(jb.Position, otherJb.Position)
+			dists[dist] = []*JunctionBox{jb, otherJb}
+		}
+	}
+
+	return dists
+}
+
 func findClosestNonConnectedBoxes(jbs []*JunctionBox) (*JunctionBox, *JunctionBox, int) {
 	minDist := -1
 	jb1, jb2 := &JunctionBox{}, &JunctionBox{}
@@ -146,13 +174,31 @@ func findClosestNonConnectedBoxes(jbs []*JunctionBox) (*JunctionBox, *JunctionBo
 func processLines(jbs []*JunctionBox) int {
 	totalDist := 0
 
+	allJBDists := findAllDistances(jbs)
+
+	// Retrieve 10 shortest distances
+	sortedDists := []int{}
+	for dist := range allJBDists {
+		sortedDists = append(sortedDists, dist)
+	}
+	fmt.Printf(" distances are: %v\n", sortedDists)
+
+	sort.Ints(sortedDists)
+	fmt.Printf("sorted shorted distances are: %v\n", sortedDists[0:10])
+
 	// Do the 10 shortest connections
 	for i := 0; i < 10; i++ {
 		// find connections of closest isolated junction boxes (no connected together)
-		jb1, jb2, minDist := findClosestNonConnectedBoxes(jbs)
+		jbDist := allJBDists[sortedDists[i]]
+		jb1 := jbDist[0]
+		jb2 := jbDist[1]
+		if areInSameCircuit(jb1, jb2) {
+			fmt.Printf("Junction boxes %s and %s are already in the same circuit, skipping\n", jb1, jb2)
+			continue
+		}
 
 		connectTogether(jb1, jb2)
-		fmt.Printf("Connecting junction boxes %s and %s (distance: %d)\n", jb1, jb2, minDist)
+		fmt.Printf("Connecting junction boxes %s and %s (distance: %d)\n", jb1, jb2, sortedDists[i])
 	}
 
 	for i := -1; i < _circuitid; i++ {
