@@ -92,49 +92,6 @@ func TestFindClosestNonConnectedBoxes(t *testing.T) {
 
 }
 
-/*
-// jb1 -> jb2 -> ... -> jbN -> jb1
-func TestIsClosedCircuit(t *testing.T) {
-	lines := parseLines(smallTextGrid)
-	circuit := []*JunctionBox{}
-
-	jb1, jb2, _ := findClosestNonConnectedBoxes(lines)
-	if isClosedCircuit(circuit) == true {
-		t.Errorf("isClosedCircuit() = true, want false")
-	}
-
-	connectTogether(jb1, jb2)
-	if isClosedCircuit(circuit) == true {
-		t.Errorf("isClosedCircuit() = ftrue, want false")
-	}
-
-	addToCircuit(&circuit, jb1)
-	addToCircuit(&circuit, jb2)
-	if isClosedCircuit(circuit) == true {
-		t.Errorf("isClosedCircuit() = true, want false")
-	}
-
-	jb3, jb4, _ := findClosestNonConnectedBoxes(lines)
-	if isClosedCircuit(circuit) == true {
-		t.Errorf("isClosedCircuit() = true, want false")
-	}
-	connectTogether(jb3, jb4)
-	if isClosedCircuit(circuit) == true {
-		t.Errorf("isClosedCircuit() = true, want false")
-	}
-
-	addToCircuit(&circuit, jb3)
-	addToCircuit(&circuit, jb4)
-	if isClosedCircuit(circuit) == true {
-		t.Errorf("isClosedCircuit() = true, want false")
-	}
-
-	connectTogether(jb4, jb1)
-	if isClosedCircuit(circuit) == false {
-		t.Errorf("isClosedCircuit() = false, want true")
-	}
-}*/
-
 func TestAreConnected(t *testing.T) {
 	lines := parseLines(textGrid)
 

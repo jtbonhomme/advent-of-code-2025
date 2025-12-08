@@ -145,7 +145,6 @@ func findClosestNonConnectedBoxes(jbs []*JunctionBox) (*JunctionBox, *JunctionBo
 
 func processLines(jbs []*JunctionBox) int {
 	totalDist := 0
-	//circuit := []*JunctionBox{}
 
 	// Do the 10 shortest connections
 	for i := 0; i < 10; i++ {
