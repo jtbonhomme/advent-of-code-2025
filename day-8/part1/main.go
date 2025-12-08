@@ -116,7 +116,7 @@ func connectTogether(jb1, jb2 *JunctionBox) {
 	} else if jb1.CircuitID == -1 && jb2.CircuitID != -1 {
 		jb1.CircuitID = jb2.CircuitID
 	} else if jb1.CircuitID != jb2.CircuitID {
-		fmt.Printf("... Merging circuits %d and %d ...\n", jb1.CircuitID, jb2.CircuitID)
+		//fmt.Printf("... Merging circuits %d and %d ...\n", jb1.CircuitID, jb2.CircuitID)
 		oldCircuitID := jb2.CircuitID
 		newCircuitID := jb1.CircuitID
 		for _, jb := range JunctionBoxes {
@@ -144,73 +144,58 @@ func findAllDistances(jbs []*JunctionBox) map[int][]*JunctionBox {
 	return dists
 }
 
-func findClosestNonConnectedBoxes(jbs []*JunctionBox) (*JunctionBox, *JunctionBox, int) {
-	minDist := -1
-	jb1, jb2 := &JunctionBox{}, &JunctionBox{}
-
-	for _, jb := range jbs {
-		for _, otherJb := range jbs {
-			if equalPosition(jb.Position, otherJb.Position) {
-				continue
-			}
-
-			if areConnected(jb, otherJb) {
-				continue
-			}
-
-			dist := sqrDist(jb.Position, otherJb.Position)
-
-			if minDist == -1 || dist < minDist {
-				minDist = dist
-				jb1 = jb
-				jb2 = otherJb
-			}
-		}
-	}
-
-	return jb1, jb2, minDist
-}
-
 func processLines(jbs []*JunctionBox) int {
-	totalDist := 0
-
 	allJBDists := findAllDistances(jbs)
 
-	// Retrieve 10 shortest distances
+	// Retrieve 1000 shortest distances
 	sortedDists := []int{}
 	for dist := range allJBDists {
 		sortedDists = append(sortedDists, dist)
 	}
-	fmt.Printf(" distances are: %v\n", sortedDists)
+	//fmt.Printf(" distances are: %v\n", sortedDists)
 
 	sort.Ints(sortedDists)
-	fmt.Printf("sorted shorted distances are: %v\n", sortedDists[0:10])
+	//fmt.Printf("sorted shorted distances are: %v\n", sortedDists[0:10])
 
-	// Do the 10 shortest connections
-	for i := 0; i < 10; i++ {
+	// Do the 1000 shortest connections
+	for i := 0; i < 1000; i++ {
 		// find connections of closest isolated junction boxes (no connected together)
 		jbDist := allJBDists[sortedDists[i]]
 		jb1 := jbDist[0]
 		jb2 := jbDist[1]
 		if areInSameCircuit(jb1, jb2) {
-			fmt.Printf("Junction boxes %s and %s are already in the same circuit, skipping\n", jb1, jb2)
+			//fmt.Printf("Junction boxes %s and %s are already in the same circuit, skipping\n", jb1, jb2)
 			continue
 		}
 
 		connectTogether(jb1, jb2)
-		fmt.Printf("Connecting junction boxes %s and %s (distance: %d)\n", jb1, jb2, sortedDists[i])
+		//fmt.Printf("Connecting junction boxes %s and %s (distance: %d)\n", jb1, jb2, sortedDists[i])
 	}
 
-	for i := -1; i < _circuitid; i++ {
-		fmt.Printf("Circuit %d:\n", i)
-		for _, jb := range jbs {
-			if jb.CircuitID == i {
-				fmt.Printf("-  %s\n", jb)
-			}
+	circuitsSize := make(map[int]int)
+	for _, jb := range jbs {
+		if jb.CircuitID != -1 {
+			circuitsSize[jb.CircuitID]++
 		}
 	}
 
-	return totalDist
+	//for i := 0; i < _circuitid; i++ {
+	//	fmt.Printf("Circuit %d has %d junction boxes:\n", i, circuitsSize[i])
+	//}
+
+	sizes := []int{}
+	for _, size := range circuitsSize {
+		sizes = append(sizes, size)
+	}
+	sort.Ints(sizes)
+	fmt.Printf("Circuit sizes (sorted): %v\n", sizes)
+
+	total := 1
+	for i := 0; i < 3; i++ {
+		total *= sizes[len(sizes)-1-i]
+	}
+
+	return total
 }
 
 func run(i string) int {

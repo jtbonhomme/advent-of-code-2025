@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -106,6 +105,8 @@ func TestAreInSameCircuit(t *testing.T) {
 
 func TestProcessLines(t *testing.T) {
 	lines := parseLines(textGrid)
-	totalDist := processLines(lines)
-	fmt.Printf("totalDist=%d\n", totalDist)
+	total := processLines(lines)
+	if total != 40 {
+		t.Errorf("processLines() = %d, want 40", total)
+	}
 }
