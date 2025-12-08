@@ -72,55 +72,35 @@ var textGrid = `162,817,812
 984,92,344
 425,690,689`
 
-var smallTextGrid = `162,817,812
-431,825,988
-984,92,344
-425,690,689`
-
-func TestFindClosestNonConnectedBoxes(t *testing.T) {
-	lines := parseLines(smallTextGrid)
-	jb1, jb2, got := findClosestNonConnectedBoxes(lines)
-	if got != 100427 {
-		t.Errorf("findClosestNonConnectedBoxes() = %v, want %v", got, 100427)
-	}
-	connectTogether(jb1, jb2)
-
-	jb3, jb4, _ := findClosestNonConnectedBoxes(lines)
-	connectTogether(jb3, jb4)
-
-	_, _, _ = findClosestNonConnectedBoxes(lines)
-
-}
-
-func TestAreConnected(t *testing.T) {
+func TestAreInSameCircuit(t *testing.T) {
 	lines := parseLines(textGrid)
 
-	if areConnected(lines[0], lines[1]) == true {
-		t.Errorf("areConnected() = false, want true")
+	if areInSameCircuit(lines[0], lines[1]) == true {
+		t.Errorf("areInSameCircuit() = false, want true")
 	}
 
 	connectTogether(lines[0], lines[1])
 
-	if areConnected(lines[0], lines[1]) == false {
-		t.Errorf("areConnected() = false, want true")
+	if areInSameCircuit(lines[0], lines[1]) == false {
+		t.Errorf("areInSameCircuit() = false, want true")
 	}
 
-	if areConnected(lines[2], lines[1]) == true {
-		t.Errorf("areConnected() = true, want false")
+	if areInSameCircuit(lines[2], lines[1]) == true {
+		t.Errorf("areInSameCircuit() = true, want false")
 	}
 
-	if areConnected(lines[2], lines[0]) == true {
-		t.Errorf("areConnected() = true, want false")
+	if areInSameCircuit(lines[2], lines[0]) == true {
+		t.Errorf("areInSameCircuit() = true, want false")
 	}
 
 	connectTogether(lines[2], lines[1])
 
-	if areConnected(lines[2], lines[1]) == false {
-		t.Errorf("areConnected() = false, want true")
+	if areInSameCircuit(lines[2], lines[1]) == false {
+		t.Errorf("areInSameCircuit() = false, want true")
 	}
 
-	if areConnected(lines[2], lines[0]) == false {
-		t.Errorf("areConnected() = false, want true")
+	if areInSameCircuit(lines[2], lines[0]) == false {
+		t.Errorf("areInSameCircuit() = false, want true")
 	}
 }
 
