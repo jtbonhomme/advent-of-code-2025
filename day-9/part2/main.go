@@ -151,14 +151,18 @@ func processLines(positions []Position) int {
 					secondtile := tiles[1]
 					if secondtile.X > maxX {
 						maxX = secondtile.X
+						continue
 					}
-
-					continue
 				}
 
 				if lineCorners == 2 && x > minX {
-					//tiles := tilesPerRow[y]
-					//firsttile := tiles[0]
+					tiles := tilesPerRow[y]
+					firsttile := tiles[0]
+					if firsttile.X > minX && firsttile.X < maxX {
+						maxX = firsttile.X
+						continue
+					}
+
 					if lastMaxX < maxX {
 						continue
 					}
@@ -203,11 +207,19 @@ func processLines(positions []Position) int {
 			if p1 == p2 {
 				continue
 			}
+			// We picked two positions that represents the opposite corners of a rectangle
+			// we need to make sure the two other corners are also in the list
+			otherCorner1 := Position{X: p1.X, Y: p2.Y}
+			otherCorner2 := Position{X: p2.X, Y: p1.Y}
+			if !slices.Contains(newPositions, otherCorner1) || !slices.Contains(newPositions, otherCorner2) {
+				continue
+			}
+
 			area = (p2.X - p1.X + 1) * (p2.Y - p1.Y + 1)
 			if area < 0 {
 				area = -area
 			}
-			//fmt.Printf("Area between %s and %s = %d\n", p1, p2, area)
+
 			// find maximum area
 			if area > maxArea {
 				maxArea = area
