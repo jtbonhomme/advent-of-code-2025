@@ -13,7 +13,16 @@ var textGrid1 = `7,1
 2,3
 7,3`
 
-var textGrid2 = `2,1
+var textGrid2 = `7,1
+11,1
+11,7
+5,7
+5,5
+2,5
+2,3
+7,3`
+
+var textGrid3 = `2,1
 9,1
 7,5
 11,5
@@ -23,17 +32,29 @@ var textGrid2 = `2,1
 7,7`
 
 func TestProcessLines(t *testing.T) {
-	want1 := 150
-	lines1 := parseLines(textGrid1)
-	got1 := processLines(lines1)
-	if got1 != want1 {
-		t.Errorf("processLines() = %v, want %v", got1, want1)
+	var lines []Position
+	var want int
+	var got int
+
+	want = 150
+	lines = parseLines(textGrid1)
+	got = processLines(lines)
+	if got != want {
+		t.Errorf("processLines() = %v, want %v", got, want)
 	}
 
-	want2 := 150
-	lines2 := parseLines(textGrid2)
-	got2 := processLines(lines2)
-	if got2 != want2 {
-		t.Errorf("processLines() = %v, want %v", got2, want2)
+	want = 150
+	lines = parseLines(textGrid2)
+	got = processLines(lines)
+	if got != want {
+		t.Errorf("processLines() = %v, want %v", got, want)
 	}
+
+	want = 120
+	lines = parseLines(textGrid3)
+	got = processLines(lines)
+	if got != want {
+		t.Errorf("processLines() = %v, want %v", got, want)
+	}
+
 }

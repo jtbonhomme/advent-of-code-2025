@@ -103,6 +103,8 @@ func processLines(positions []Position) int {
 	newPositions := []Position{}
 
 	totalCorners := 0 // 0 to nRows*2 -1
+	lastMinX := 0
+	lastMaxX := 0
 	for y := 0; y <= getMaxY(positions); y++ {
 		lineCorners := 0 // 0 to 1
 		for x := 0; x <= getMaxX(positions); x++ {
@@ -116,18 +118,54 @@ func processLines(positions []Position) int {
 				if totalCorners == 1 {
 					// first line first corner
 					minX = x
+					continue
 				}
 				if totalCorners == 2 {
 					// first line second corner
 					maxX = x
+					continue
 				}
 				if totalCorners == nRows*2-1 {
 					// last line first corner
 					minX = getMaxX(positions) + 1
+					continue
 				}
 				if totalCorners == nRows*2 {
 					// last line second corner
 					maxX = -1
+					continue
+				}
+
+				if lineCorners == 1 && x < minX {
+					minX = x
+					continue
+				}
+
+				if lineCorners == 2 && x > maxX {
+					maxX = x
+					continue
+				}
+
+				if lineCorners == 1 && x > minX {
+					tiles := tilesPerRow[y]
+					secondtile := tiles[1]
+					if secondtile.X > maxX {
+						maxX = secondtile.X
+					}
+
+					continue
+				}
+
+				if lineCorners == 2 && x > minX {
+					//tiles := tilesPerRow[y]
+					//firsttile := tiles[0]
+					if lastMaxX < maxX {
+						continue
+					}
+					if minX == lastMinX {
+						minX = x
+						continue
+					}
 				}
 
 				continue
@@ -152,64 +190,11 @@ func processLines(positions []Position) int {
 			}
 
 			fmt.Printf(" . ")
-
-			/*
-				if !metCorner && slices.Contains(positions, Position{X: x, Y: y}) {
-					// found a corner
-					newPositions = append(newPositions, Position{X: x, Y: y})
-					fmt.Printf("o")
-					totalCornerss++
-
-					if x != lastP2.X {
-						metCorner = true
-						newP1 = Position{X: x, Y: y}
-						continue
-					}
-
-					continue
-				}
-
-				if metCorner && slices.Contains(positions, Position{X: x, Y: y}) {
-					// found a corner
-					newPositions = append(newPositions, Position{X: x, Y: y})
-					fmt.Printf("o")
-					totalCornerss++
-
-					if newP1.X == lastP1.X && totalCornerss == 2 {
-						newP1 = Position{X: x, Y: y}
-					}
-
-					if newP1.X == lastP2.X || firstLine {
-						metCorner = false
-						firstLine = false
-						newP2 = Position{X: x, Y: y}
-					}
-
-					continue
-				}
-
-				if !metCorner && x == lastP1.X {
-					metCorner = true
-				}
-
-				if metCorner && x > lastP2.X {
-					metCorner = false
-				}
-
-				if metCorner {
-					fmt.Printf("*")
-					newPositions = append(newPositions, Position{X: x, Y: y})
-					continue
-				}
-
-				if !metCorner && x >= lastP1.X && x <= lastP1.X {
-					fmt.Printf("*")
-					newPositions = append(newPositions, Position{X: x, Y: y})
-					continue
-				}
-			*/
 		}
-		fmt.Printf("\n")
+
+		fmt.Printf("   minX: %02d, maxX: %02d - lastMinX: %02d, lastMaxX: %02d\n", minX, maxX, lastMinX, lastMaxX)
+		lastMinX = minX
+		lastMaxX = maxX
 	}
 
 	for _, p1 := range newPositions {
