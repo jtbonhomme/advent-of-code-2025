@@ -15,6 +15,8 @@ import (
 //go:embed input.txt
 var input string
 
+var test bool
+
 type Position struct {
 	X int
 	Y int
@@ -91,12 +93,16 @@ func processLines(positions []Position) int {
 
 	nRows := len(tilesPerRow)
 
-	fmt.Printf("\nNumber of rows: %d\n", nRows)
-	//sumRows := 0
+	if test {
+		fmt.Printf("\nNumber of rows: %d\n", nRows)
+	}
 
+	fmt.Printf("board dimension: %d,%d\n", getMaxX(positions), getMaxY(positions))
 	minX := getMaxX(positions) + 1
 	maxX := -1
-	fmt.Printf("Min X: %d, Max X: %d\n", minX, maxX)
+	if test {
+		fmt.Printf("Min X: %d, Max X: %d\n", minX, maxX)
+	}
 
 	// parse all position couples
 	// and find the biggest area
@@ -105,16 +111,29 @@ func processLines(positions []Position) int {
 	totalCorners := 0 // 0 to nRows*2 -1
 	lastMinX := 0
 	lastMaxX := 0
+	ops := 0
+	fmt.Println("find all possible positions with input boundaries")
 	for y := 0; y <= getMaxY(positions); y++ {
 		lineCorners := 0 // 0 to 1
+		if y < positions[0].Y {
+			y = positions[0].Y
+		}
 		for x := 0; x <= getMaxX(positions); x++ {
+			//if x < lastMinX {
+			//	continue
+			//}
+			//if x > lastMaxX {
+			//	break
+			//}
+			ops++
 			if slices.Contains(positions, Position{X: x, Y: y}) {
 				// found a corner
 				totalCorners++
 				lineCorners++
 				newPositions = append(newPositions, Position{X: x, Y: y})
-				fmt.Printf("%03d", totalCorners)
-
+				if test {
+					fmt.Printf("%03d", totalCorners)
+				}
 				if totalCorners == 1 {
 					// first line first corner
 					minX = x
@@ -177,31 +196,43 @@ func processLines(positions []Position) int {
 
 			if totalCorners == 1 && x >= minX {
 				newPositions = append(newPositions, Position{X: x, Y: y})
-				fmt.Printf(" x ")
+				if test {
+					fmt.Printf(" x ")
+				}
 				continue
 			}
 
 			if totalCorners == nRows*2-1 && x <= maxX {
 				newPositions = append(newPositions, Position{X: x, Y: y})
-				fmt.Printf(" x ")
+				if test {
+					fmt.Printf(" x ")
+				}
 				continue
 			}
 
 			if x <= maxX && x >= minX {
 				newPositions = append(newPositions, Position{X: x, Y: y})
-				fmt.Printf(" x ")
+				if test {
+					fmt.Printf(" x ")
+				}
 				continue
 			}
 
-			fmt.Printf(" . ")
+			if test {
+				fmt.Printf(" . ")
+			}
 		}
 
-		fmt.Printf("   minX: %02d, maxX: %02d - lastMinX: %02d, lastMaxX: %02d\n", minX, maxX, lastMinX, lastMaxX)
+		if test {
+			fmt.Printf("   minX: %02d, maxX: %02d - lastMinX: %02d, lastMaxX: %02d\n", minX, maxX, lastMinX, lastMaxX)
+		}
 		lastMinX = minX
 		lastMaxX = maxX
 	}
 
-	for _, p1 := range newPositions {
+	fmt.Println("now find all rectangles that can be formed within the new positions")
+
+	for _, p1 := range positions {
 		area := 0
 		for _, p2 := range positions {
 			if p1 == p2 {
@@ -227,6 +258,7 @@ func processLines(positions []Position) int {
 		}
 	}
 
+	fmt.Println("total ops:", ops)
 	return maxArea
 }
 

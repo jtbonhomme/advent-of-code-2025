@@ -36,6 +36,7 @@ func TestProcessLines(t *testing.T) {
 	var want int
 	var got int
 
+	test = true
 	want = 24
 	lines = parseLines(textGrid1)
 	got = processLines(lines)
