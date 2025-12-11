@@ -105,141 +105,171 @@ func processLines(positions []Position) int {
 	}
 
 	// parse all rows and cols occupied ranges
-	rowsRanges := make(map[int][2]int) // Y -> [minX, maxX]
-	//colsRanges := make(map[int][2]int) // X -> [minY, maxY]
-	newPositions := []Position{}
+	rowsRanges := make(map[int][]int) // Y -> [minX, maxX]
+	colsRanges := make(map[int][]int) // X -> [minY, maxY]
 
-	totalCorners := 0 // 0 to nRows*2 -1
-	lastMinX := 0
-	lastMaxX := 0
+	//totalCorners := 0 // 0 to nRows*2 -1
+	//lastMinX := 0
+	//lastMaxX := 0
 	ops := 0
-	fmt.Println("find all possible positions with input boundaries")
-	if test {
-		for i, pos := range positions {
-			fmt.Printf("%02d: %v, ", i+1, pos)
+	fmt.Println("build shape occupied ranges")
+
+	// get first couple of positions (superior horizontal shape edge)
+	lastP1 := positions[0]
+	lastP2 := positions[1]
+	rowsRanges[lastP1.Y] = []int{lastP1.X, lastP2.X}
+
+	for i := 1; i < len(positions)/2; i++ {
+		p1 := positions[i*2]
+		p2 := positions[i*2+1]
+		rowsRanges[p1.Y] = []int{p1.X, p2.X}
+		if p1.X == lastP1.X {
+			colsRanges[p1.X] = []int{lastP1.Y, p1.Y}
 		}
-		fmt.Println()
+		if p1.X == lastP2.X {
+			colsRanges[p1.X] = []int{lastP2.Y, p1.Y}
+		}
+		if p2.X == lastP1.X {
+			colsRanges[p2.X] = []int{lastP1.Y, p2.Y}
+		}
+		if p2.X == lastP2.X {
+			colsRanges[p2.X] = []int{lastP2.Y, p2.Y}
+		}
+		lastP1 = p1
+		lastP2 = p2
+	}
+	if test {
+		fmt.Printf("rows ranges: %v\ncols ranges X: %v\n", rowsRanges, colsRanges)
 	}
 
-	if test {
-		fmt.Printf("\n   ")
-		for x := 0; x <= getMaxX(positions); x++ {
-			fmt.Printf("% 2d ", x)
-		}
-		fmt.Println()
-	}
+	// build last vertical shape edge
 
-	for y := 0; y <= getMaxY(positions); y++ {
-		lineCorners := 0 // 0 to 1
-		rowsRanges[y] = [2]int{minX, maxX}
+	/*
 		if test {
-			fmt.Printf("%02d ", y)
-		}
-		for x := 0; x <= getMaxX(positions); x++ {
-			ops++
-			if slices.Contains(positions, Position{X: x, Y: y}) {
-				// found a corner
-				totalCorners++
-				lineCorners++
-				newPositions = append(newPositions, Position{X: x, Y: y})
-				if test {
-					fmt.Printf("%03d", totalCorners)
-				}
-				if totalCorners == 1 {
-					// first line first corner
-					minX = x
-					continue
-				}
-				if totalCorners == 2 {
-					// first line second corner
-					maxX = x
-					continue
-				}
-				if totalCorners == nRows*2-1 {
-					// last line first corner
-					minX = getMaxX(positions) + 1
-					continue
-				}
-				if totalCorners == nRows*2 {
-					// last line second corner
-					maxX = -1
-					continue
-				}
-
-				if lineCorners == 1 && x < minX {
-					minX = x
-					continue
-				}
-
-				if lineCorners == 2 && x > maxX {
-					maxX = x
-					continue
-				}
-
-				if lineCorners == 1 && x > minX {
-					tiles := tilesPerRow[y]
-					secondtile := tiles[1]
-					if secondtile.X > maxX {
-						maxX = secondtile.X
-						continue
-					}
-				}
-
-				if lineCorners == 2 && x > minX {
-					tiles := tilesPerRow[y]
-					firsttile := tiles[0]
-					if firsttile.X > minX && firsttile.X < lastMaxX {
-						maxX = firsttile.X
-						continue
-					}
-
-					if lastMaxX < maxX {
-						continue
-					}
-					if minX == lastMinX {
-						minX = x
-						continue
-					}
-				}
-
-				continue
+			for i, pos := range positions {
+				fmt.Printf("%02d: %v, ", i+1, pos)
 			}
-
-			if totalCorners == 1 && x >= minX {
-				newPositions = append(newPositions, Position{X: x, Y: y})
-				if test {
-					fmt.Printf(" x ")
-				}
-				continue
-			}
-
-			if totalCorners == nRows*2-1 && x <= maxX {
-				newPositions = append(newPositions, Position{X: x, Y: y})
-				if test {
-					fmt.Printf(" x ")
-				}
-				continue
-			}
-
-			if x <= maxX && x >= minX {
-				newPositions = append(newPositions, Position{X: x, Y: y})
-				if test {
-					fmt.Printf(" x ")
-				}
-				continue
-			}
-
-			if test {
-				fmt.Printf(" . ")
-			}
+			fmt.Println()
 		}
 
 		if test {
-			fmt.Printf("   minX: %02d, maxX: %02d - lastMinX: %02d, lastMaxX: %02d\n", minX, maxX, lastMinX, lastMaxX)
+			fmt.Printf("\n   ")
+			for x := 0; x <= getMaxX(positions); x++ {
+				fmt.Printf("% 2d ", x)
+			}
+			fmt.Println()
 		}
-		lastMinX = minX
-		lastMaxX = maxX
-	}
+			for y := 0; y <= getMaxY(positions); y++ {
+				lineCorners := 0 // 0 to 1
+				rowsRanges[y] = []int{minX, maxX}
+				if test {
+					fmt.Printf("%02d ", y)
+				}
+				for x := 0; x <= getMaxX(positions); x++ {
+					ops++
+					if slices.Contains(positions, Position{X: x, Y: y}) {
+						// found a corner
+						totalCorners++
+						lineCorners++
+						newPositions = append(newPositions, Position{X: x, Y: y})
+						if test {
+							fmt.Printf("%03d", totalCorners)
+						}
+						if totalCorners == 1 {
+							// first line first corner
+							minX = x
+							continue
+						}
+						if totalCorners == 2 {
+							// first line second corner
+							maxX = x
+							continue
+						}
+						if totalCorners == nRows*2-1 {
+							// last line first corner
+							minX = getMaxX(positions) + 1
+							continue
+						}
+						if totalCorners == nRows*2 {
+							// last line second corner
+							maxX = -1
+							continue
+						}
+
+						if lineCorners == 1 && x < minX {
+							minX = x
+							continue
+						}
+
+						if lineCorners == 2 && x > maxX {
+							maxX = x
+							continue
+						}
+
+						if lineCorners == 1 && x > minX {
+							tiles := tilesPerRow[y]
+							secondtile := tiles[1]
+							if secondtile.X > maxX {
+								maxX = secondtile.X
+								continue
+							}
+						}
+
+						if lineCorners == 2 && x > minX {
+							tiles := tilesPerRow[y]
+							firsttile := tiles[0]
+							if firsttile.X > minX && firsttile.X < lastMaxX {
+								maxX = firsttile.X
+								continue
+							}
+
+							if lastMaxX < maxX {
+								continue
+							}
+							if minX == lastMinX {
+								minX = x
+								continue
+							}
+						}
+
+						continue
+					}
+
+					if totalCorners == 1 && x >= minX {
+						newPositions = append(newPositions, Position{X: x, Y: y})
+						if test {
+							fmt.Printf(" x ")
+						}
+						continue
+					}
+
+					if totalCorners == nRows*2-1 && x <= maxX {
+						newPositions = append(newPositions, Position{X: x, Y: y})
+						if test {
+							fmt.Printf(" x ")
+						}
+						continue
+					}
+
+					if x <= maxX && x >= minX {
+						newPositions = append(newPositions, Position{X: x, Y: y})
+						if test {
+							fmt.Printf(" x ")
+						}
+						continue
+					}
+
+					if test {
+						fmt.Printf(" . ")
+					}
+				}
+
+				if test {
+					fmt.Printf("   minX: %02d, maxX: %02d - lastMinX: %02d, lastMaxX: %02d\n", minX, maxX, lastMinX, lastMaxX)
+				}
+				lastMinX = minX
+				lastMaxX = maxX
+			}*/
 
 	fmt.Println("now find all rectangles that can be formed within the new positions")
 
