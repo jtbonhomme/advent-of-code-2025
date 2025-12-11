@@ -104,8 +104,9 @@ func processLines(positions []Position) int {
 		fmt.Printf("Min X: %d, Max X: %d\n", minX, maxX)
 	}
 
-	// parse all position couples
-	// and find the biggest area
+	// parse all rows and cols occupied ranges
+	rowsRanges := make(map[int][2]int) // Y -> [minX, maxX]
+	//colsRanges := make(map[int][2]int) // X -> [minY, maxY]
 	newPositions := []Position{}
 
 	totalCorners := 0 // 0 to nRows*2 -1
@@ -113,8 +114,27 @@ func processLines(positions []Position) int {
 	lastMaxX := 0
 	ops := 0
 	fmt.Println("find all possible positions with input boundaries")
+	if test {
+		for i, pos := range positions {
+			fmt.Printf("%02d: %v, ", i+1, pos)
+		}
+		fmt.Println()
+	}
+
+	if test {
+		fmt.Printf("\n   ")
+		for x := 0; x <= getMaxX(positions); x++ {
+			fmt.Printf("% 2d ", x)
+		}
+		fmt.Println()
+	}
+
 	for y := 0; y <= getMaxY(positions); y++ {
 		lineCorners := 0 // 0 to 1
+		rowsRanges[y] = [2]int{minX, maxX}
+		if test {
+			fmt.Printf("%02d ", y)
+		}
 		for x := 0; x <= getMaxX(positions); x++ {
 			ops++
 			if slices.Contains(positions, Position{X: x, Y: y}) {
