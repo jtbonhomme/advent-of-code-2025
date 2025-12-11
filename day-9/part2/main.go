@@ -67,6 +67,40 @@ func getMaxY(positions []Position) int {
 	return maxY
 }
 
+func displayBoard(positions []Position) {
+	totalCorners := 0
+
+	if test {
+		fmt.Println("Displaying board:")
+		for i, pos := range positions {
+			fmt.Printf("%02d: %v, ", i+1, pos)
+		}
+		fmt.Println()
+		fmt.Printf("\n   ")
+		for x := 0; x <= getMaxX(positions); x++ {
+			fmt.Printf("% 2d ", x)
+		}
+		fmt.Println()
+
+		for y := 0; y <= getMaxY(positions); y++ {
+			fmt.Printf("%02d ", y)
+			for x := 0; x <= getMaxX(positions); x++ {
+				if slices.Contains(positions, Position{X: x, Y: y}) {
+					// found a corner
+					totalCorners++
+					fmt.Printf("%03d", totalCorners)
+
+					continue
+				}
+
+				fmt.Printf(" . ")
+			}
+
+			fmt.Println()
+		}
+	}
+}
+
 func processLines(positions []Position) int {
 	var maxArea int = -1
 
@@ -97,12 +131,13 @@ func processLines(positions []Position) int {
 		fmt.Printf("\nNumber of rows: %d\n", nRows)
 	}
 
-	fmt.Printf("board dimension: %d,%d\n", getMaxX(positions), getMaxY(positions))
 	minX := getMaxX(positions) + 1
 	maxX := -1
 	if test {
+		fmt.Printf("board dimension: %d,%d\n", getMaxX(positions), getMaxY(positions))
 		fmt.Printf("Min X: %d, Max X: %d\n", minX, maxX)
 	}
+	fmt.Printf("ordered positions: %v\n", positions)
 
 	// parse all rows and cols occupied ranges
 	rowsRanges := make(map[int][]int) // Y -> [minX, maxX]
@@ -143,6 +178,8 @@ func processLines(positions []Position) int {
 	}
 
 	// build last vertical shape edge
+
+	displayBoard(positions)
 
 	/*
 		if test {
@@ -272,32 +309,32 @@ func processLines(positions []Position) int {
 			}*/
 
 	fmt.Println("now find all rectangles that can be formed within the new positions")
+	/*
+		for _, p1 := range positions {
+			area := 0
+			for _, p2 := range positions {
+				if p1 == p2 {
+					continue
+				}
+				// We picked two positions that represents the opposite corners of a rectangle
+				// we need to make sure the two other corners are also in the list
+				otherCorner1 := Position{X: p1.X, Y: p2.Y}
+				otherCorner2 := Position{X: p2.X, Y: p1.Y}
+				if !slices.Contains(newPositions, otherCorner1) || !slices.Contains(newPositions, otherCorner2) {
+					continue
+				}
 
-	for _, p1 := range positions {
-		area := 0
-		for _, p2 := range positions {
-			if p1 == p2 {
-				continue
-			}
-			// We picked two positions that represents the opposite corners of a rectangle
-			// we need to make sure the two other corners are also in the list
-			otherCorner1 := Position{X: p1.X, Y: p2.Y}
-			otherCorner2 := Position{X: p2.X, Y: p1.Y}
-			if !slices.Contains(newPositions, otherCorner1) || !slices.Contains(newPositions, otherCorner2) {
-				continue
-			}
+				area = (p2.X - p1.X + 1) * (p2.Y - p1.Y + 1)
+				if area < 0 {
+					area = -area
+				}
 
-			area = (p2.X - p1.X + 1) * (p2.Y - p1.Y + 1)
-			if area < 0 {
-				area = -area
+				// find maximum area
+				if area > maxArea {
+					maxArea = area
+				}
 			}
-
-			// find maximum area
-			if area > maxArea {
-				maxArea = area
-			}
-		}
-	}
+		}*/
 
 	fmt.Println("total ops:", ops)
 	return maxArea
