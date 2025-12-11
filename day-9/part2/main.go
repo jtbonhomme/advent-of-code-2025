@@ -115,16 +115,7 @@ func processLines(positions []Position) int {
 	fmt.Println("find all possible positions with input boundaries")
 	for y := 0; y <= getMaxY(positions); y++ {
 		lineCorners := 0 // 0 to 1
-		if y < positions[0].Y {
-			y = positions[0].Y
-		}
 		for x := 0; x <= getMaxX(positions); x++ {
-			//if x < lastMinX {
-			//	continue
-			//}
-			//if x > lastMaxX {
-			//	break
-			//}
 			ops++
 			if slices.Contains(positions, Position{X: x, Y: y}) {
 				// found a corner
@@ -177,7 +168,7 @@ func processLines(positions []Position) int {
 				if lineCorners == 2 && x > minX {
 					tiles := tilesPerRow[y]
 					firsttile := tiles[0]
-					if firsttile.X > minX && firsttile.X < maxX {
+					if firsttile.X > minX && firsttile.X < lastMaxX {
 						maxX = firsttile.X
 						continue
 					}

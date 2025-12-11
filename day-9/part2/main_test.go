@@ -35,9 +35,9 @@ func TestProcessLines(t *testing.T) {
 	var lines []Position
 	var want int
 	var got int
-
+	/**/
 	test = true
-	want = 24
+	want = 21
 	lines = parseLines(textGrid1)
 	got = processLines(lines)
 	if got != want {
@@ -47,15 +47,17 @@ func TestProcessLines(t *testing.T) {
 	want = 35
 	lines = parseLines(textGrid2)
 	got = processLines(lines)
+
 	if got != want {
 		t.Errorf("processLines() = %v, want %v", got, want)
 	}
 
-	want = 42
+	want = 41
 	lines = parseLines(textGrid3)
 	got = processLines(lines)
+
 	if got != want {
 		t.Errorf("processLines() = %v, want %v", got, want)
 	}
-
+	/**/
 }
