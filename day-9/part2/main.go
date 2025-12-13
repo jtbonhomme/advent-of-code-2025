@@ -280,12 +280,19 @@ func abs(a int) int {
 func isInTheShape(p Position, rowsRanges map[int][]int) bool {
 	countCrossedEdges := 0
 
+	rowRange, ok := rowsRanges[p.Y]
+	if ok && (p.X == rowRange[0] || p.X == rowRange[1]) {
+		// p is equal to an existing corner
+		return true
+	}
+
 	for y := p.Y; y >= 0; y-- {
 		rowRange, ok := rowsRanges[y]
 		if !ok {
 			// no edge on this row
 			continue
 		}
+
 		if p.X >= rowRange[0] && p.X <= rowRange[1] {
 			// we crossed an horizontal edge
 			countCrossedEdges++
