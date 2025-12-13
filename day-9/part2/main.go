@@ -177,39 +177,7 @@ func processLines(positions []Position) int {
 	fmt.Printf("ordered positions: %v\n", positions)
 
 	// parse all rows and cols occupied ranges
-	rowsRanges := make(map[int][]int) // Y -> [minX, maxX]
-	colsRanges := make(map[int][]int) // X -> [minY, maxY]
-
-	fmt.Println("build shape occupied ranges")
-
-	// get first couple of positions (superior horizontal shape edge)
-	lastP1 := positions[0]
-	lastP2 := positions[1]
-	rowsRanges[lastP1.Y] = []int{lastP1.X, lastP2.X}
-
-	for i := 1; i < len(positions)/2; i++ {
-		p1 := positions[i*2]
-		p2 := positions[i*2+1]
-		rowsRanges[p1.Y] = []int{p1.X, p2.X}
-		if p1.X == lastP1.X {
-			colsRanges[p1.X] = []int{lastP1.Y, p1.Y}
-		}
-		if p1.X == lastP2.X {
-			colsRanges[p1.X] = []int{lastP2.Y, p1.Y}
-		}
-		if p2.X == lastP1.X {
-			colsRanges[p2.X] = []int{lastP1.Y, p2.Y}
-		}
-		if p2.X == lastP2.X {
-			colsRanges[p2.X] = []int{lastP2.Y, p2.Y}
-		}
-		lastP1 = p1
-		lastP2 = p2
-	}
-	debug("rows ranges: %v\ncols ranges X: %v\n", rowsRanges, colsRanges)
-
-	// build last vertical shape edge
-
+	rowsRanges := computeRowsRanges(positions)
 	displayBoard(positions)
 
 	fmt.Printf("\n\n >> Now find all rectangles that can be formed within the new positions\n\n")
@@ -264,6 +232,25 @@ func processLines(positions []Position) int {
 	return maxArea
 }
 
+func computeRowsRanges(positions []Position) map[int][]int {
+	rowsRanges := make(map[int][]int) // Y -> [minX, maxX]
+	// get first couple of positions (superior horizontal shape edge)
+	lastP1 := positions[0]
+	lastP2 := positions[1]
+	rowsRanges[lastP1.Y] = []int{lastP1.X, lastP2.X}
+
+	for i := 1; i < len(positions)/2; i++ {
+		p1 := positions[i*2]
+		p2 := positions[i*2+1]
+		rowsRanges[p1.Y] = []int{p1.X, p2.X}
+		lastP1 = p1
+		lastP2 = p2
+	}
+	debug("rows ranges: %v\n", rowsRanges)
+
+	return rowsRanges
+}
+
 func abs(a int) int {
 	if a < 0 {
 		return -a
@@ -292,6 +279,8 @@ func isInTheShape(p Position, rowsRanges map[int][]int) bool {
 			// no edge on this row
 			continue
 		}
+		// sort x from rowRange
+		slices.Sort(rowRange)
 
 		if p.X >= rowRange[0] && p.X <= rowRange[1] {
 			// we crossed an horizontal edge

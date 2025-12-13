@@ -78,3 +78,37 @@ func TestProcessLines(t *testing.T) {
 	   	}
 	*/
 }
+
+func TestIsInShape(t *testing.T) {
+	positions := parseLines(textGrid1)
+	test = true
+	displayBoard(positions)
+
+	rowsRanges := computeRowsRanges(positions)
+
+	tests := []struct {
+		p    Position
+		want bool
+	}{
+		{Position{X: 4, Y: 6}, false},
+		{Position{X: 7, Y: 7}, false},
+		{Position{X: 0, Y: 0}, false},
+		{Position{X: 4, Y: 2}, false},
+		{Position{X: 4, Y: 3}, true},
+		{Position{X: 4, Y: 4}, true},
+		{Position{X: 4, Y: 5}, true},
+		{Position{X: 10, Y: 7}, true},
+		{Position{X: 3, Y: 4}, true},
+		{Position{X: 8, Y: 4}, true},
+		{Position{X: 7, Y: 1}, true},
+		{Position{X: 11, Y: 1}, true},
+		{Position{X: 9, Y: 7}, true},
+	}
+
+	for _, tt := range tests {
+		got := isInTheShape(tt.p, rowsRanges)
+		if got != tt.want {
+			t.Errorf("isInTheShape(%v) = %v, want %v", tt.p, got, tt.want)
+		}
+	}
+}
