@@ -17,6 +17,12 @@ var input string
 
 var test bool
 
+func debug(format string, a ...any) {
+	if test {
+		fmt.Printf(format, a...)
+	}
+}
+
 type Position struct {
 	X int
 	Y int
@@ -70,34 +76,69 @@ func getMaxY(positions []Position) int {
 func displayBoard(positions []Position) {
 	totalCorners := 0
 
-	if test {
-		fmt.Println("Displaying board:")
-		for i, pos := range positions {
-			fmt.Printf("%02d: %v, ", i+1, pos)
-		}
-		fmt.Println()
-		fmt.Printf("\n   ")
+	debug("Displaying board:\n")
+	for i, pos := range positions {
+		debug("%02d: %v, ", i+1, pos)
+	}
+	debug("\n")
+	debug("\n   ")
+	for x := 0; x <= getMaxX(positions); x++ {
+		debug("% 2d ", x)
+	}
+	debug("\n")
+
+	for y := 0; y <= getMaxY(positions); y++ {
+		debug("%02d ", y)
 		for x := 0; x <= getMaxX(positions); x++ {
-			fmt.Printf("% 2d ", x)
-		}
-		fmt.Println()
+			if slices.Contains(positions, Position{X: x, Y: y}) {
+				// found a corner
+				totalCorners++
+				debug(" %d ", totalCorners)
 
-		for y := 0; y <= getMaxY(positions); y++ {
-			fmt.Printf("%02d ", y)
-			for x := 0; x <= getMaxX(positions); x++ {
-				if slices.Contains(positions, Position{X: x, Y: y}) {
-					// found a corner
-					totalCorners++
-					fmt.Printf("%03d", totalCorners)
-
-					continue
-				}
-
-				fmt.Printf(" . ")
+				continue
 			}
 
-			fmt.Println()
+			debug(" . ")
 		}
+
+		debug("\n")
+	}
+}
+
+func displayBoardWithRectangle(positions []Position, p1, p2 Position) {
+	totalCorners := 0
+
+	debug("Displaying board:\n")
+	for i, pos := range positions {
+		debug("%02d: %v, ", i+1, pos)
+	}
+	debug("\n")
+	debug("\n   ")
+	for x := 0; x <= getMaxX(positions); x++ {
+		debug("% 2d ", x)
+	}
+	debug("\n")
+
+	for y := 0; y <= getMaxY(positions); y++ {
+		debug("%02d ", y)
+		for x := 0; x <= getMaxX(positions); x++ {
+			if slices.Contains(positions, Position{X: x, Y: y}) {
+				// found a corner
+				totalCorners++
+				if (x == p1.X && y == p1.Y) || (x == p2.X && y == p2.Y) {
+					// vertical edge of rectangle
+					debug("[#]")
+				} else {
+					debug(" %d ", totalCorners)
+				}
+
+				continue
+			}
+
+			debug(" . ")
+		}
+
+		debug("\n")
 	}
 }
 
@@ -127,26 +168,18 @@ func processLines(positions []Position) int {
 
 	nRows := len(tilesPerRow)
 
-	if test {
-		fmt.Printf("\nNumber of rows: %d\n", nRows)
-	}
+	debug("\nNumber of rows: %d\n", nRows)
 
 	minX := getMaxX(positions) + 1
 	maxX := -1
-	if test {
-		fmt.Printf("board dimension: %d,%d\n", getMaxX(positions), getMaxY(positions))
-		fmt.Printf("Min X: %d, Max X: %d\n", minX, maxX)
-	}
+	debug("board dimension: %d,%d\n", getMaxX(positions), getMaxY(positions))
+	debug("Min X: %d, Max X: %d\n", minX, maxX)
 	fmt.Printf("ordered positions: %v\n", positions)
 
 	// parse all rows and cols occupied ranges
 	rowsRanges := make(map[int][]int) // Y -> [minX, maxX]
 	colsRanges := make(map[int][]int) // X -> [minY, maxY]
 
-	//totalCorners := 0 // 0 to nRows*2 -1
-	//lastMinX := 0
-	//lastMaxX := 0
-	ops := 0
 	fmt.Println("build shape occupied ranges")
 
 	// get first couple of positions (superior horizontal shape edge)
@@ -173,171 +206,94 @@ func processLines(positions []Position) int {
 		lastP1 = p1
 		lastP2 = p2
 	}
-	if test {
-		fmt.Printf("rows ranges: %v\ncols ranges X: %v\n", rowsRanges, colsRanges)
-	}
+	debug("rows ranges: %v\ncols ranges X: %v\n", rowsRanges, colsRanges)
 
 	// build last vertical shape edge
 
 	displayBoard(positions)
 
-	/*
-		if test {
-			for i, pos := range positions {
-				fmt.Printf("%02d: %v, ", i+1, pos)
+	fmt.Printf("\n\n >> Now find all rectangles that can be formed within the new positions\n\n")
+	ops := 0
+	for i, p1 := range positions {
+		area := 0
+		for j, p2 := range positions {
+			if j >= i {
+				continue
 			}
-			fmt.Println()
+			debug("testing positions %v and %v\n", p1, p2)
+
+			ops++
+			// We pick two positions that represents the opposite corners of a rectangle
+			otherCorner1 := Position{X: p1.X, Y: p2.Y}
+			otherCorner2 := Position{X: p2.X, Y: p1.Y}
+
+			// we need to make sure:
+			// A) the two other corners are also in the shape
+			if !isInTheShape(otherCorner1, rowsRanges) {
+				debug("  other corner %v is NOT in the shape\n", otherCorner1)
+				continue
+			}
+			if !isInTheShape(otherCorner2, rowsRanges) {
+				debug("  other corner %v is NOT in the shape\n", otherCorner2)
+				continue
+			}
+			// B) each edge of the rectangle is included in the shape
+			// C) the center of the rectangle is also in the shape
+			center := Position{X: (p1.X + p2.X) / 2, Y: (p1.Y + p2.Y) / 2}
+			if !isInTheShape(center, rowsRanges) {
+				debug("  center %v is NOT in the shape\n", center)
+				continue
+			}
+
+			displayBoardWithRectangle(positions, p1, p2)
+
+			// this rectangle is valid, compute area and compare to max area
+			area = (abs(p2.X-p1.X) + 1) * (abs(p2.Y-p1.Y) + 1)
+			if area < 0 {
+				area = -area
+			}
+			debug("  Found rectangle corners %v and %v with area %d\n\n", p1, p2, area)
+			// find maximum area
+			if area > maxArea {
+				maxArea = area
+			}
 		}
+	}
 
-		if test {
-			fmt.Printf("\n   ")
-			for x := 0; x <= getMaxX(positions); x++ {
-				fmt.Printf("% 2d ", x)
-			}
-			fmt.Println()
-		}
-			for y := 0; y <= getMaxY(positions); y++ {
-				lineCorners := 0 // 0 to 1
-				rowsRanges[y] = []int{minX, maxX}
-				if test {
-					fmt.Printf("%02d ", y)
-				}
-				for x := 0; x <= getMaxX(positions); x++ {
-					ops++
-					if slices.Contains(positions, Position{X: x, Y: y}) {
-						// found a corner
-						totalCorners++
-						lineCorners++
-						newPositions = append(newPositions, Position{X: x, Y: y})
-						if test {
-							fmt.Printf("%03d", totalCorners)
-						}
-						if totalCorners == 1 {
-							// first line first corner
-							minX = x
-							continue
-						}
-						if totalCorners == 2 {
-							// first line second corner
-							maxX = x
-							continue
-						}
-						if totalCorners == nRows*2-1 {
-							// last line first corner
-							minX = getMaxX(positions) + 1
-							continue
-						}
-						if totalCorners == nRows*2 {
-							// last line second corner
-							maxX = -1
-							continue
-						}
-
-						if lineCorners == 1 && x < minX {
-							minX = x
-							continue
-						}
-
-						if lineCorners == 2 && x > maxX {
-							maxX = x
-							continue
-						}
-
-						if lineCorners == 1 && x > minX {
-							tiles := tilesPerRow[y]
-							secondtile := tiles[1]
-							if secondtile.X > maxX {
-								maxX = secondtile.X
-								continue
-							}
-						}
-
-						if lineCorners == 2 && x > minX {
-							tiles := tilesPerRow[y]
-							firsttile := tiles[0]
-							if firsttile.X > minX && firsttile.X < lastMaxX {
-								maxX = firsttile.X
-								continue
-							}
-
-							if lastMaxX < maxX {
-								continue
-							}
-							if minX == lastMinX {
-								minX = x
-								continue
-							}
-						}
-
-						continue
-					}
-
-					if totalCorners == 1 && x >= minX {
-						newPositions = append(newPositions, Position{X: x, Y: y})
-						if test {
-							fmt.Printf(" x ")
-						}
-						continue
-					}
-
-					if totalCorners == nRows*2-1 && x <= maxX {
-						newPositions = append(newPositions, Position{X: x, Y: y})
-						if test {
-							fmt.Printf(" x ")
-						}
-						continue
-					}
-
-					if x <= maxX && x >= minX {
-						newPositions = append(newPositions, Position{X: x, Y: y})
-						if test {
-							fmt.Printf(" x ")
-						}
-						continue
-					}
-
-					if test {
-						fmt.Printf(" . ")
-					}
-				}
-
-				if test {
-					fmt.Printf("   minX: %02d, maxX: %02d - lastMinX: %02d, lastMaxX: %02d\n", minX, maxX, lastMinX, lastMaxX)
-				}
-				lastMinX = minX
-				lastMaxX = maxX
-			}*/
-
-	fmt.Println("now find all rectangles that can be formed within the new positions")
-	/*
-		for _, p1 := range positions {
-			area := 0
-			for _, p2 := range positions {
-				if p1 == p2 {
-					continue
-				}
-				// We picked two positions that represents the opposite corners of a rectangle
-				// we need to make sure the two other corners are also in the list
-				otherCorner1 := Position{X: p1.X, Y: p2.Y}
-				otherCorner2 := Position{X: p2.X, Y: p1.Y}
-				if !slices.Contains(newPositions, otherCorner1) || !slices.Contains(newPositions, otherCorner2) {
-					continue
-				}
-
-				area = (p2.X - p1.X + 1) * (p2.Y - p1.Y + 1)
-				if area < 0 {
-					area = -area
-				}
-
-				// find maximum area
-				if area > maxArea {
-					maxArea = area
-				}
-			}
-		}*/
-
-	fmt.Println("total ops:", ops)
+	debug("Total operations: %d\n", ops)
 	return maxArea
+}
+
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+
+	return a
+}
+
+// isInTheShape implements an horizontal winding: check if point is within the shape defined by rowsRanges.
+// It starts from the given position, then examin each position to the up (until begining of the column)
+// each time we cross an horizontal edge, we increment a counter.
+// When we reach the upper edge of the board, if the counter is odd,
+// we are within the shape, if even, we are outside the shape.
+func isInTheShape(p Position, rowsRanges map[int][]int) bool {
+	countCrossedEdges := 0
+
+	for y := p.Y; y >= 0; y-- {
+		rowRange, ok := rowsRanges[y]
+		if !ok {
+			// no edge on this row
+			continue
+		}
+		if p.X >= rowRange[0] && p.X <= rowRange[1] {
+			// we crossed an horizontal edge
+			countCrossedEdges++
+		}
+	}
+
+	// if we crossed an odd number of edges, we are within the shape
+	return (countCrossedEdges%2 == 1)
 }
 
 func run(i string) int {

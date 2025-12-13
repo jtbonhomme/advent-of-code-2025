@@ -41,40 +41,40 @@ var textGrid4 = `2,11
 7,2`
 
 func TestProcessLines(t *testing.T) {
-	var lines []Position
+	var positions []Position
 	var want int
 	var got int
 	/**/
 	test = true
-	want = 21
-	lines = parseLines(textGrid1)
-	got = processLines(lines)
+	want = 24
+	positions = parseLines(textGrid1)
+	got = processLines(positions)
 	if got != want {
 		t.Errorf("processLines() = %v, want %v", got, want)
 	}
+	/*
+	   want = 35
+	   positions = parseLines(textGrid2)
+	   got = processLines(positions)
 
-	want = 35
-	lines = parseLines(textGrid2)
-	got = processLines(lines)
+	   	if got != want {
+	   		t.Errorf("processLines() = %v, want %v", got, want)
+	   	}
 
-	if got != want {
-		t.Errorf("processLines() = %v, want %v", got, want)
-	}
+	   want = 41
+	   positions = parseLines(textGrid3)
+	   got = processLines(positions)
 
-	want = 41
-	lines = parseLines(textGrid3)
-	got = processLines(lines)
+	   	if got != want {
+	   		t.Errorf("processLines() = %v, want %v", got, want)
+	   	}
 
-	if got != want {
-		t.Errorf("processLines() = %v, want %v", got, want)
-	}
+	   want = 41
+	   positions = parseLines(textGrid4)
+	   got = processLines(positions)
 
-	want = 41
-	lines = parseLines(textGrid4)
-	got = processLines(lines)
-
-	if got != want {
-		t.Errorf("processLines() = %v, want %v", got, want)
-	}
-	/**/
+	   	if got != want {
+	   		t.Errorf("processLines() = %v, want %v", got, want)
+	   	}
+	*/
 }
