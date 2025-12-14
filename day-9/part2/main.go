@@ -16,6 +16,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -35,6 +36,7 @@ var inputs embed.FS
 var inputfile string
 
 var test bool
+var info bool
 
 var rowsRanges map[int][]int
 var colsRanges map[int][]int
@@ -513,6 +515,24 @@ func (g *Game) Update() error {
 		return fmt.Errorf("game ended by user")
 	}
 
+	if inpututil.IsKeyJustPressed(ebiten.KeyI) {
+		info = !info
+	}
+
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		x, y := ebiten.CursorPosition()
+		scale := getScaleFactor()
+		boardX := int(float64(x) / scale)
+		boardY := int(float64(y) / scale)
+		fmt.Printf("mouse clicked at pixel (%d,%d) -> board position (%d,%d)\n", x, y, boardX, boardY)
+		res := isInTheShape(Position{X: boardX, Y: boardY}, rowsRanges)
+		if res {
+			fmt.Printf("  position (%d,%d) is WITHIN the shape\n", boardX, boardY)
+		} else {
+			fmt.Printf("  position (%d,%d) is OUTSIDE the shape\n", boardX, boardY)
+		}
+	}
+
 	if ebiten.IsKeyPressed(ebiten.KeySpace) {
 		fmt.Println("starting processing...")
 		if !isStarted {
@@ -539,7 +559,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	draw(pixels)
 
 	screen.WritePixels(pixels)
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("minX: %d - maxX: %d\nminY: %d - maxY: %d\nscale factor: %0.6f", getMinX(positions), getMaxX(positions), getMinY(positions), getMaxY(positions), getScaleFactor()))
+	if info {
+		x, y := ebiten.CursorPosition()
+		scale := getScaleFactor()
+		boardX := int(float64(x) / scale)
+		boardY := int(float64(y) / scale)
+
+		ebitenutil.DebugPrint(screen, fmt.Sprintf("minX: %d - maxX: %d\nminY: %d - maxY: %d\nscale factor: %0.6f\npos: %d, %d | %d, %d", getMinX(positions), getMaxX(positions), getMinY(positions), getMaxY(positions), getScaleFactor(), x, y, boardX, boardY))
+	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
