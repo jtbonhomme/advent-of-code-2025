@@ -7,7 +7,9 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"image/color"
 	"log"
+	"time"
 
 	//    "regexp"
 	//    "strconv"
@@ -17,12 +19,14 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/schollz/progressbar/v3"
 )
 
 const (
-	screenWidth  = 400
-	screenHeight = 400
+	screenWidth                = 400
+	screenHeight               = 400
+	processTime  time.Duration = 5 * time.Second
 )
 
 type Game struct {
@@ -40,6 +44,16 @@ var info bool
 
 var rowsRanges map[int][]int
 var colsRanges map[int][]int
+
+type Rectangle struct {
+	X      float32
+	Y      float32
+	Width  float32
+	Height float32
+}
+
+var candidateRectangle Rectangle
+var maxAreaRectangle Rectangle
 
 func debug(format string, a ...any) {
 	if test {
@@ -252,6 +266,7 @@ func processLines(positions []Position) int {
 	fmt.Printf("found %d cols ranges\n", len(colsRanges))
 	//displayBoard(positions)
 
+	opProcessTime := processTime / time.Duration(len(positions)*len(positions))
 	fmt.Println("find all rectangles that can be formed within the new positions")
 	ops := 0
 	bar := progressbar.Default(int64(firstIntegerSum(len(positions))))
@@ -264,25 +279,44 @@ func processLines(positions []Position) int {
 			debug("testing positions: %v and %v\n", p1, p2)
 			bar.Add(1)
 			ops++
+			time.Sleep(opProcessTime)
+
 			// We pick two positions that represents the opposite corners of a rectangle
 			otherCorner1 := Position{X: p1.X, Y: p2.Y}
 			otherCorner2 := Position{X: p2.X, Y: p1.Y}
 			debug("other corners: %v and %v\n", otherCorner1, otherCorner2)
 
+			candidateRectangle = Rectangle{
+				X:      float32(p1.X),
+				Y:      float32(p1.Y),
+				Width:  float32(p2.X - p1.X),
+				Height: float32(p2.Y - p1.Y),
+			}
+			if candidateRectangle.Width < 0 {
+				candidateRectangle.Width--
+			} else {
+				candidateRectangle.Width++
+			}
+			if candidateRectangle.Height < 0 {
+				candidateRectangle.Height--
+			} else {
+				candidateRectangle.Height++
+			}
+
 			// we need to make sure:
 			// A) the two other corners are also in the shape
-			if !isInTheShape(otherCorner1, rowsRanges) {
+			if !isInTheShape(otherCorner1, rowsRanges, colsRanges) {
 				debug("  other corner %v is NOT in the shape\n", otherCorner1)
 				continue
 			}
-			if !isInTheShape(otherCorner2, rowsRanges) {
+			if !isInTheShape(otherCorner2, rowsRanges, colsRanges) {
 				debug("  other corner %v is NOT in the shape\n", otherCorner2)
 				continue
 			}
 			// B) each edge of the rectangle is included in the shape
 			// C) the center of the rectangle is also in the shape
 			center := Position{X: (p1.X + p2.X) / 2, Y: (p1.Y + p2.Y) / 2}
-			if !isInTheShape(center, rowsRanges) {
+			if !isInTheShape(center, rowsRanges, colsRanges) {
 				debug("  center %v is NOT in the shape\n", center)
 				continue
 			}
@@ -295,15 +329,39 @@ func processLines(positions []Position) int {
 				area = -area
 			}
 			debug("  Found rectangle corners %v and %v with area %d\n\n", p1, p2, area)
+
 			// find maximum area
 			if area > maxArea {
 				maxArea = area
+				maxAreaRectangle = candidateRectangle
+				debug("  New MAX AREA: %d\n\n", maxArea)
 			}
 		}
 	}
 
 	debug("Total operations: %d\n", ops)
 	return maxArea
+}
+
+func getBoardDimension(p Position) (int, int) {
+	scale := getScaleFactor()
+	boardX := int(float64(p.X) / scale)
+	boardY := int(float64(p.Y) / scale)
+
+	return boardX, boardY
+}
+
+func drawCandidateRectangle(screen *ebiten.Image) {
+	scale := getScaleFactor()
+	boardX := float32(float64(candidateRectangle.X) * scale)
+	boardY := float32(float64(candidateRectangle.Y) * scale)
+	width := float32(float64(candidateRectangle.Width) * scale)
+	height := float32(float64(candidateRectangle.Height) * scale)
+	vector.StrokeRect(screen, boardX, boardY, width, height, 0.4, color.White, false)
+}
+
+func drawBiggestAreaRectangle(screen *ebiten.Image) {
+	vector.FillRect(screen, maxAreaRectangle.X, maxAreaRectangle.Y, maxAreaRectangle.Width, maxAreaRectangle.Height, color.White, false)
 }
 
 func computeRowsRanges(positions []Position) map[int][]int {
@@ -362,7 +420,7 @@ func firstIntegerSum(n int) int {
 // each time we cross an horizontal edge, we increment a counter.
 // When we reach the upper edge of the board, if the counter is odd,
 // we are within the shape, if even, we are outside the shape.
-func isInTheShape(p Position, rowsRanges map[int][]int) bool {
+func isInTheShape(p Position, rowsRanges, colsRanges map[int][]int) bool {
 	countCrossedEdges := 0
 	// first check if p is exactly on an edge
 	rowRange, ok := rowsRanges[p.Y]
@@ -521,11 +579,9 @@ func (g *Game) Update() error {
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
-		scale := getScaleFactor()
-		boardX := int(float64(x) / scale)
-		boardY := int(float64(y) / scale)
+		boardX, boardY := getBoardDimension(Position{X: x, Y: y})
 		fmt.Printf("mouse clicked at pixel (%d,%d) -> board position (%d,%d)\n", x, y, boardX, boardY)
-		res := isInTheShape(Position{X: boardX, Y: boardY}, rowsRanges)
+		res := isInTheShape(Position{X: boardX, Y: boardY}, rowsRanges, colsRanges)
 		if res {
 			fmt.Printf("  position (%d,%d) is WITHIN the shape\n", boardX, boardY)
 		} else {
@@ -556,15 +612,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		pixels = make([]byte, screenWidth*screenHeight*4)
 	}
 
+	// draw background
 	draw(pixels)
-
 	screen.WritePixels(pixels)
+
+	// draw candidate rectangle
+	drawCandidateRectangle(screen)
+
+	// draw biggest area rectangle
+	drawBiggestAreaRectangle(screen)
+
+	// display info
 	if info {
 		x, y := ebiten.CursorPosition()
-		scale := getScaleFactor()
-		boardX := int(float64(x) / scale)
-		boardY := int(float64(y) / scale)
-
+		boardX, boardY := getBoardDimension(Position{X: x, Y: y})
 		ebitenutil.DebugPrint(screen, fmt.Sprintf("minX: %d - maxX: %d\nminY: %d - maxY: %d\nscale factor: %0.6f\npos: %d, %d | %d, %d", getMinX(positions), getMaxX(positions), getMinY(positions), getMaxY(positions), getScaleFactor(), x, y, boardX, boardY))
 	}
 }
