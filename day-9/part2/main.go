@@ -3,19 +3,36 @@ package main
 import (
 	"bufio"
 	"cmp"
+	"embed"
 	_ "embed"
+	"flag"
 	"fmt"
+	"log"
 
 	//    "regexp"
 	//    "strconv"
 	"slices"
 	"strings"
 
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/schollz/progressbar/v3"
 )
 
-//go:embed input.txt
-var input string
+const (
+	screenWidth  = 400
+	screenHeight = 400
+)
+
+type Game struct {
+}
+
+var isStarted bool
+var pixels []byte
+
+//go:embed *.txt
+var inputs embed.FS
+var inputfile string
 
 var test bool
 
@@ -55,7 +72,39 @@ func parseLines(i string) []Position {
 	return res
 }
 
+func getMinX(positions []Position) int {
+	if len(positions) == 0 {
+		return -1
+	}
+
+	minX := positions[0].X
+	for _, p := range positions {
+		if p.X < minX {
+			minX = p.X
+		}
+	}
+	return minX
+}
+
+func getMinY(positions []Position) int {
+	if len(positions) == 0 {
+		return -1
+	}
+
+	minY := positions[0].Y
+	for _, p := range positions {
+		if p.Y < minY {
+			minY = p.Y
+		}
+	}
+	return minY
+}
+
 func getMaxX(positions []Position) int {
+	if len(positions) == 0 {
+		return -1
+	}
+
 	maxX := positions[0].X
 	for _, p := range positions {
 		if p.X > maxX {
@@ -66,6 +115,10 @@ func getMaxX(positions []Position) int {
 }
 
 func getMaxY(positions []Position) int {
+	if len(positions) == 0 {
+		return -1
+	}
+
 	maxY := positions[0].Y
 	for _, p := range positions {
 		if p.Y > maxY {
@@ -341,16 +394,119 @@ func isInTheShape(p Position, rowsRanges map[int][]int) bool {
 	return (rest == 1)
 }
 
+var positions []Position
+
+func getScaleFactor() float64 {
+
+	minX := getMinX(positions)
+	minY := getMinY(positions)
+	maxX := getMaxX(positions)
+	maxY := getMaxY(positions)
+
+	scaleX := 1.0
+	if maxX-minX >= screenWidth {
+		scaleX = float64(screenWidth) / float64(maxX-minX+1)
+	}
+	scaleY := 1.0
+	if maxY-minY >= screenHeight {
+		scaleY = float64(screenHeight) / float64(maxY-minY+1)
+	}
+
+	scale := scaleX
+	if scaleY < scaleX {
+		scale = scaleY
+	}
+
+	return scale
+}
+
+func draw(pixels []byte) {
+	if len(pixels) != screenWidth*screenHeight*4 {
+		log.Fatalf("pixels length is %d, expected %d", len(pixels), screenWidth*screenHeight*4)
+	}
+
+	// clear screen
+	for i := range pixels {
+		pixels[i] = 0x00
+	}
+
+	if len(positions) == 0 {
+		return
+	}
+
+	scale := getScaleFactor()
+
+	// draw positions
+	for _, p := range positions {
+		scaledX := int(float64(p.X) * scale)
+		scaledY := int(float64(p.Y) * scale)
+		p := Position{X: scaledX, Y: scaledY}
+		if p.X < 0 || p.X >= screenWidth || p.Y < 0 || p.Y >= screenHeight {
+			continue
+		}
+		idx := (p.Y*screenWidth + p.X) * 4
+		pixels[idx] = 0xff   // R
+		pixels[idx+1] = 0xff // G
+		pixels[idx+2] = 0xff // B
+		pixels[idx+3] = 0xff // A
+	}
+}
+
 func run(i string) int {
 	fmt.Println("parsing input...")
-	positions := parseLines(i)
+	positions = parseLines(i)
 	fmt.Println("processing input...")
 	answer := processLines(positions)
 	fmt.Println("... done")
 	return answer
 }
 
+func (g *Game) Update() error {
+	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+		return fmt.Errorf("game ended by user")
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		fmt.Println("starting processing...")
+		if !isStarted {
+			isStarted = true
+			go func() {
+				data, _ := inputs.ReadFile(inputfile)
+				answer := run(string(data))
+				fmt.Println("Answer: ", answer)
+			}()
+		}
+	}
+
+	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	if !isStarted {
+		return
+	}
+	if pixels == nil {
+		pixels = make([]byte, screenWidth*screenHeight*4)
+	}
+
+	draw(pixels)
+
+	screen.WritePixels(pixels)
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("minX: %d - maxX: %d\nminY: %d - maxY: %d\nscale factor: %0.6f", getMinX(positions), getMaxX(positions), getMinY(positions), getMaxY(positions), getScaleFactor()))
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+	return screenWidth, screenHeight
+}
+
 func main() {
-	answer := run(input)
-	fmt.Println("Answer: ", answer)
+	flag.StringVar(&inputfile, "input", "input.txt", "input file")
+	flag.Parse()
+	g := &Game{}
+
+	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
+	ebiten.SetWindowTitle("Advent Of Code 2025 - day9 part2")
+	if err := ebiten.RunGame(g); err != nil {
+		log.Fatal(err)
+	}
 }
