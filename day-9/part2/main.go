@@ -10,6 +10,8 @@ import (
 	//    "strconv"
 	"slices"
 	"strings"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 //go:embed input.txt
@@ -74,6 +76,10 @@ func getMaxY(positions []Position) int {
 }
 
 func displayBoard(positions []Position) {
+	if !test {
+		return
+	}
+
 	totalCorners := 0
 
 	debug("Displaying board:\n")
@@ -106,6 +112,10 @@ func displayBoard(positions []Position) {
 }
 
 func displayBoardWithRectangle(positions []Position, p1, p2 Position) {
+	if !test {
+		return
+	}
+
 	totalCorners := 0
 
 	debug("Displaying board:\n")
@@ -174,26 +184,30 @@ func processLines(positions []Position) int {
 	maxX := -1
 	debug("board dimension: %d,%d\n", getMaxX(positions), getMaxY(positions))
 	debug("Min X: %d, Max X: %d\n", minX, maxX)
-	fmt.Printf("ordered positions: %v\n", positions)
+	debug("ordered positions: %v\n", positions)
 
 	// parse all rows and cols occupied ranges
+	fmt.Println("computeRowsRanges")
 	rowsRanges := computeRowsRanges(positions)
+	fmt.Printf("found %d rows ranges\n", len(rowsRanges))
 	displayBoard(positions)
 
-	fmt.Printf("\n\n >> Now find all rectangles that can be formed within the new positions\n\n")
+	fmt.Println("find all rectangles that can be formed within the new positions")
 	ops := 0
+	bar := progressbar.Default(int64(firstIntegerSum(len(positions))))
 	for i, p1 := range positions {
 		area := 0
 		for j, p2 := range positions {
 			if j >= i {
 				continue
 			}
-			debug("testing positions %v and %v\n", p1, p2)
-
+			debug("testing positions: %v and %v\n", p1, p2)
+			bar.Add(1)
 			ops++
 			// We pick two positions that represents the opposite corners of a rectangle
 			otherCorner1 := Position{X: p1.X, Y: p2.Y}
 			otherCorner2 := Position{X: p2.X, Y: p1.Y}
+			debug("other corners: %v and %v\n", otherCorner1, otherCorner2)
 
 			// we need to make sure:
 			// A) the two other corners are also in the shape
@@ -239,14 +253,18 @@ func computeRowsRanges(positions []Position) map[int][]int {
 	lastP2 := positions[1]
 	rowsRanges[lastP1.Y] = []int{lastP1.X, lastP2.X}
 
+	bar := progressbar.Default(int64(len(positions)/2 - 1))
+
 	for i := 1; i < len(positions)/2; i++ {
+		bar.Add(1)
 		p1 := positions[i*2]
 		p2 := positions[i*2+1]
 		rowsRanges[p1.Y] = []int{p1.X, p2.X}
+		// sort x from rowRange
+		slices.Sort(rowsRanges[p1.Y])
 		lastP1 = p1
 		lastP2 = p2
 	}
-	debug("rows ranges: %v\n", rowsRanges)
 
 	return rowsRanges
 }
@@ -259,6 +277,15 @@ func abs(a int) int {
 	return a
 }
 
+func firstIntegerSum(n int) int {
+	var res int
+	for i := 1; i <= n; i++ {
+		res += i
+	}
+
+	return res
+}
+
 // isInTheShape implements an horizontal winding: check if point is within the shape defined by rowsRanges.
 // It starts from the given position, then examin each position to the up (until begining of the column)
 // each time we cross an horizontal edge, we increment a counter.
@@ -266,35 +293,60 @@ func abs(a int) int {
 // we are within the shape, if even, we are outside the shape.
 func isInTheShape(p Position, rowsRanges map[int][]int) bool {
 	countCrossedEdges := 0
-
+	// first check if p is exactly on an edge
 	rowRange, ok := rowsRanges[p.Y]
-	if ok && (p.X == rowRange[0] || p.X == rowRange[1]) {
-		// p is equal to an existing corner
+	if ok &&
+		p.X >= rowRange[0] &&
+		p.X <= rowRange[1] {
+		// p is located on an horizontal edge
 		return true
 	}
 
+	// the point is not on an edge, we can proceed with the winding
 	for y := p.Y; y >= 0; y-- {
 		rowRange, ok := rowsRanges[y]
 		if !ok {
 			// no edge on this row
 			continue
 		}
-		// sort x from rowRange
-		slices.Sort(rowRange)
 
 		if p.X >= rowRange[0] && p.X <= rowRange[1] {
 			// we crossed an horizontal edge
 			countCrossedEdges++
 		}
+
+		// if we reached the bottom of a vertical edge,
+		// we move y to the upper vertical corner
+		if p.X == rowRange[0] || p.X == rowRange[1] {
+			// is there another corner at the same column?
+			nextY := -1
+			for yy := y - 1; yy >= 0; yy-- {
+				rr, ok := rowsRanges[yy]
+				if !ok {
+					continue
+				}
+				if rr[0] == p.X || rr[1] == p.X {
+					nextY = yy
+					break
+				}
+			}
+			if nextY != -1 {
+				y = nextY
+			}
+		}
 	}
 
 	// if we crossed an odd number of edges, we are within the shape
-	return (countCrossedEdges%2 == 1)
+	rest := countCrossedEdges % 2
+	return (rest == 1)
 }
 
 func run(i string) int {
+	fmt.Println("parsing input...")
 	positions := parseLines(i)
+	fmt.Println("processing input...")
 	answer := processLines(positions)
+	fmt.Println("... done")
 	return answer
 }
 
