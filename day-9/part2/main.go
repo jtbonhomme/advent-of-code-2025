@@ -37,8 +37,7 @@ var inputfile string
 var test bool
 
 var rowsRanges map[int][]int
-
-//var colsRanges map[int][]int
+var colsRanges map[int][]int
 
 func debug(format string, a ...any) {
 	if test {
@@ -246,7 +245,9 @@ func processLines(positions []Position) int {
 	// parse all rows and cols occupied ranges
 	fmt.Println("computeRowsRanges")
 	rowsRanges = computeRowsRanges(positions)
+	colsRanges = computeColsRanges(positions)
 	fmt.Printf("found %d rows ranges\n", len(rowsRanges))
+	fmt.Printf("found %d cols ranges\n", len(colsRanges))
 	//displayBoard(positions)
 
 	fmt.Println("find all rectangles that can be formed within the new positions")
@@ -310,10 +311,7 @@ func computeRowsRanges(positions []Position) map[int][]int {
 	lastP2 := positions[1]
 	rowsRanges[lastP1.Y] = []int{lastP1.X, lastP2.X}
 
-	bar := progressbar.Default(int64(len(positions)/2 - 1))
-
 	for i := 1; i < len(positions)/2; i++ {
-		bar.Add(1)
 		p1 := positions[i*2]
 		p2 := positions[i*2+1]
 		rowsRanges[p1.Y] = []int{p1.X, p2.X}
@@ -324,6 +322,26 @@ func computeRowsRanges(positions []Position) map[int][]int {
 	}
 
 	return rowsRanges
+}
+
+func computeColsRanges(positions []Position) map[int][]int {
+	colsRanges := make(map[int][]int) // X -> [minY, maxY]
+	// get first couple of positions (superior horizontal shape edge)
+	lastP1 := positions[0]
+	lastP2 := positions[1]
+	colsRanges[lastP1.X] = []int{lastP1.Y, lastP2.Y}
+
+	for i := 1; i < len(positions)/2; i++ {
+		p1 := positions[i*2]
+		p2 := positions[i*2+1]
+		colsRanges[p1.X] = []int{p1.Y, p2.Y}
+		// sort y from colRange
+		slices.Sort(colsRanges[p1.X])
+		lastP1 = p1
+		lastP2 = p2
+	}
+
+	return colsRanges
 }
 
 func abs(a int) int {
@@ -401,19 +419,18 @@ func isInTheShape(p Position, rowsRanges map[int][]int) bool {
 var positions []Position
 
 func getScaleFactor() float64 {
-
 	minX := getMinX(positions)
 	minY := getMinY(positions)
 	maxX := getMaxX(positions)
 	maxY := getMaxY(positions)
 
 	scaleX := 1.0
-	if maxX-minX >= screenWidth {
-		scaleX = float64(screenWidth) / float64(maxX-minX+1)
+	if maxX+minX >= screenWidth {
+		scaleX = float64(screenWidth) / float64(maxX+minX+1)
 	}
 	scaleY := 1.0
-	if maxY-minY >= screenHeight {
-		scaleY = float64(screenHeight) / float64(maxY-minY+1)
+	if maxY+minY >= screenHeight {
+		scaleY = float64(screenHeight) / float64(maxY+minY+1)
 	}
 
 	scale := scaleX
@@ -441,19 +458,20 @@ func draw(pixels []byte) {
 	scale := getScaleFactor()
 
 	// draw positions
-	for _, p := range positions {
-		scaledX := int(float64(p.X) * scale)
-		scaledY := int(float64(p.Y) * scale)
-		p := Position{X: scaledX, Y: scaledY}
-		if p.X < 0 || p.X >= screenWidth || p.Y < 0 || p.Y >= screenHeight {
-			continue
-		}
-		idx := (p.Y*screenWidth + p.X) * 4
-		pixels[idx] = 0xff   // R
-		pixels[idx+1] = 0x1f // G
-		pixels[idx+2] = 0x1f // B
-		pixels[idx+3] = 0x1f // A
-	}
+	/*
+		for _, p := range positions {
+			scaledX := int(float64(p.X) * scale)
+			scaledY := int(float64(p.Y) * scale)
+			p := Position{X: scaledX, Y: scaledY}
+			if p.X < 0 || p.X >= screenWidth || p.Y < 0 || p.Y >= screenHeight {
+				continue
+			}
+			idx := (p.Y*screenWidth + p.X) * 4
+			pixels[idx] = 0xff   // R
+			pixels[idx+1] = 0x1f // G
+			pixels[idx+2] = 0x1f // B
+			pixels[idx+3] = 0x1f // A
+		}*/
 
 	// draw rows ranges
 	for y, rowRange := range rowsRanges {
@@ -464,6 +482,25 @@ func draw(pixels []byte) {
 		for x := rowRange[0]; x <= rowRange[1]; x++ {
 			scaledX := int(float64(x) * scale)
 			if scaledX < 0 || scaledX >= screenWidth {
+				continue
+			}
+			idx := (scaledY*screenWidth + scaledX) * 4
+			pixels[idx] = 0x11   // R
+			pixels[idx+1] = 0x11 // G
+			pixels[idx+2] = 0xf1 // B
+			pixels[idx+3] = 0x60 // A
+		}
+	}
+
+	// draw cols ranges
+	for x, colRange := range colsRanges {
+		scaledX := int(float64(x) * scale)
+		if scaledX < 0 || scaledX >= screenWidth {
+			continue
+		}
+		for y := colRange[0]; y <= colRange[1]; y++ {
+			scaledY := int(float64(y) * scale)
+			if scaledY < 0 || scaledY >= screenHeight {
 				continue
 			}
 			idx := (scaledY*screenWidth + scaledX) * 4
