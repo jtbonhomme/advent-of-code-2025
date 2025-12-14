@@ -36,6 +36,10 @@ var inputfile string
 
 var test bool
 
+var rowsRanges map[int][]int
+
+//var colsRanges map[int][]int
+
 func debug(format string, a ...any) {
 	if test {
 		fmt.Printf(format, a...)
@@ -241,9 +245,9 @@ func processLines(positions []Position) int {
 
 	// parse all rows and cols occupied ranges
 	fmt.Println("computeRowsRanges")
-	rowsRanges := computeRowsRanges(positions)
+	rowsRanges = computeRowsRanges(positions)
 	fmt.Printf("found %d rows ranges\n", len(rowsRanges))
-	displayBoard(positions)
+	//displayBoard(positions)
 
 	fmt.Println("find all rectangles that can be formed within the new positions")
 	ops := 0
@@ -446,9 +450,28 @@ func draw(pixels []byte) {
 		}
 		idx := (p.Y*screenWidth + p.X) * 4
 		pixels[idx] = 0xff   // R
-		pixels[idx+1] = 0xff // G
-		pixels[idx+2] = 0xff // B
-		pixels[idx+3] = 0xff // A
+		pixels[idx+1] = 0x1f // G
+		pixels[idx+2] = 0x1f // B
+		pixels[idx+3] = 0x1f // A
+	}
+
+	// draw rows ranges
+	for y, rowRange := range rowsRanges {
+		scaledY := int(float64(y) * scale)
+		if scaledY < 0 || scaledY >= screenHeight {
+			continue
+		}
+		for x := rowRange[0]; x <= rowRange[1]; x++ {
+			scaledX := int(float64(x) * scale)
+			if scaledX < 0 || scaledX >= screenWidth {
+				continue
+			}
+			idx := (scaledY*screenWidth + scaledX) * 4
+			pixels[idx] = 0x11   // R
+			pixels[idx+1] = 0x11 // G
+			pixels[idx+2] = 0xf1 // B
+			pixels[idx+3] = 0x60 // A
+		}
 	}
 }
 
