@@ -46,10 +46,10 @@ var rowsRanges map[int][]int
 var colsRanges map[int][]int
 
 type Rectangle struct {
-	X      float32
-	Y      float32
-	Width  float32
-	Height float32
+	X1 float32
+	Y1 float32
+	X2 float32
+	Y2 float32
 }
 
 var candidateRectangle Rectangle
@@ -262,11 +262,10 @@ func processLines(positions []Position) int {
 	fmt.Println("computeRowsRanges")
 	rowsRanges = computeRowsRanges(positions)
 	colsRanges = computeColsRanges(positions)
-	fmt.Printf("found %d rows ranges\n", len(rowsRanges))
-	fmt.Printf("found %d cols ranges\n", len(colsRanges))
+	fmt.Printf("found %d rows ranges: %v\n", len(rowsRanges), rowsRanges)
+	fmt.Printf("found %d cols ranges: %v\n", len(colsRanges), colsRanges)
 	//displayBoard(positions)
 
-	opProcessTime := processTime / time.Duration(len(positions)*len(positions))
 	fmt.Println("find all rectangles that can be formed within the new positions")
 	ops := 0
 	bar := progressbar.Default(int64(firstIntegerSum(len(positions))))
@@ -279,7 +278,9 @@ func processLines(positions []Position) int {
 			debug("testing positions: %v and %v\n", p1, p2)
 			bar.Add(1)
 			ops++
-			time.Sleep(opProcessTime)
+			if test {
+				time.Sleep(time.Duration(500 * time.Millisecond))
+			}
 
 			// We pick two positions that represents the opposite corners of a rectangle
 			otherCorner1 := Position{X: p1.X, Y: p2.Y}
@@ -287,20 +288,10 @@ func processLines(positions []Position) int {
 			debug("other corners: %v and %v\n", otherCorner1, otherCorner2)
 
 			candidateRectangle = Rectangle{
-				X:      float32(p1.X),
-				Y:      float32(p1.Y),
-				Width:  float32(p2.X - p1.X),
-				Height: float32(p2.Y - p1.Y),
-			}
-			if candidateRectangle.Width < 0 {
-				candidateRectangle.Width--
-			} else {
-				candidateRectangle.Width++
-			}
-			if candidateRectangle.Height < 0 {
-				candidateRectangle.Height--
-			} else {
-				candidateRectangle.Height++
+				X1: float32(p1.X),
+				Y1: float32(p1.Y),
+				X2: float32(p2.X),
+				Y2: float32(p2.Y),
 			}
 
 			// we need to make sure:
@@ -352,16 +343,49 @@ func getBoardDimension(p Position) (int, int) {
 }
 
 func drawCandidateRectangle(screen *ebiten.Image) {
+	// candidate rectangle is defined by 2 opposite corners (X1,Y1) and (X2,Y2)
+	// let's compute the two other corners.
+	otherP1X := candidateRectangle.X1
+	otherP1Y := candidateRectangle.Y2
+	otherP2X := candidateRectangle.X2
+	otherP2Y := candidateRectangle.Y1
+
+	// where is the top left corner?
+
+	rectX := float32(min(int(candidateRectangle.X1), int(otherP1X), int(otherP2X)))
+	rectY := float32(min(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y)))
+	rectWidth := float32(abs(max(int(candidateRectangle.X1), int(otherP1X), int(otherP2X)) - min(int(candidateRectangle.X1), int(otherP1X), int(otherP2X))))
+	rectHeight := float32(abs(max(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y)) - min(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y))))
+
 	scale := getScaleFactor()
-	boardX := float32(float64(candidateRectangle.X) * scale)
-	boardY := float32(float64(candidateRectangle.Y) * scale)
-	width := float32(float64(candidateRectangle.Width) * scale)
-	height := float32(float64(candidateRectangle.Height) * scale)
-	vector.StrokeRect(screen, boardX, boardY, width, height, 0.4, color.White, false)
+	boardX := float32(float64(rectX) * scale)
+	boardY := float32(float64(rectY) * scale)
+	width := float32(float64(rectWidth) * scale)
+	height := float32(float64(rectHeight) * scale)
+	vector.StrokeRect(screen, boardX, boardY, width, height, 0.2, color.RGBA{R: 150, G: 150, B: 150, A: 30}, false)
 }
 
 func drawBiggestAreaRectangle(screen *ebiten.Image) {
-	vector.FillRect(screen, maxAreaRectangle.X, maxAreaRectangle.Y, maxAreaRectangle.Width, maxAreaRectangle.Height, color.White, false)
+	// candidate rectangle is defined by 2 opposite corners (X1,Y1) and (X2,Y2)
+	// let's compute the two other corners.
+	otherP1X := maxAreaRectangle.X1
+	otherP1Y := maxAreaRectangle.Y2
+	otherP2X := maxAreaRectangle.X2
+	otherP2Y := maxAreaRectangle.Y1
+
+	// where is the top left corner?
+
+	rectX := float32(min(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X)))
+	rectY := float32(min(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y)))
+	rectWidth := float32(abs(max(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X)) - min(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X))))
+	rectHeight := float32(abs(max(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y)) - min(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y))))
+
+	scale := getScaleFactor()
+	boardX := float32(float64(rectX) * scale)
+	boardY := float32(float64(rectY) * scale)
+	width := float32(float64(rectWidth) * scale)
+	height := float32(float64(rectHeight) * scale)
+	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 50, G: 50, B: 50, A: 30}, false)
 }
 
 func computeRowsRanges(positions []Position) map[int][]int {
@@ -398,12 +422,94 @@ func computeColsRanges(positions []Position) map[int][]int {
 	return colsRanges
 }
 
+func extendRows(
+	rowsRanges map[int][]int,
+	colsRanges map[int][]int,
+) map[int][]int {
+
+	extended := make(map[int][]int, len(rowsRanges))
+
+	for y, xr := range rowsRanges {
+		xmin, xmax := xr[0], xr[1]
+		extendedMax := xmax
+
+		for x, yr := range colsRanges {
+			ymin, ymax := yr[0], yr[1]
+
+			// la colonne x coupe la ligne y
+			if y >= ymin && y <= ymax {
+				if x >= xmax && x > extendedMax {
+					extendedMax = x
+				}
+			}
+		}
+
+		extended[y] = []int{xmin, extendedMax}
+	}
+
+	return extended
+}
+
+func extendCols(
+	colsRanges map[int][]int,
+	rowsRanges map[int][]int,
+) map[int][]int {
+
+	extended := make(map[int][]int, len(colsRanges))
+
+	for x, yr := range colsRanges {
+		ymin, ymax := yr[0], yr[1]
+		extendedMax := ymax
+
+		for y, xr := range rowsRanges {
+			xmin, xmax := xr[0], xr[1]
+
+			// la ligne y coupe la colonne x
+			if x >= xmin && x <= xmax {
+				if y >= ymax && y > extendedMax {
+					extendedMax = y
+				}
+			}
+		}
+
+		extended[x] = []int{ymin, extendedMax}
+	}
+
+	return extended
+}
+
 func abs(a int) int {
 	if a < 0 {
 		return -a
 	}
 
 	return a
+}
+
+func min(vals ...int) int {
+	if len(vals) == 0 {
+		return 0
+	}
+	m := vals[0]
+	for _, v := range vals[1:] {
+		if v < m {
+			m = v
+		}
+	}
+	return m
+}
+
+func max(vals ...int) int {
+	if len(vals) == 0 {
+		return 0
+	}
+	m := vals[0]
+	for _, v := range vals[1:] {
+		if v > m {
+			m = v
+		}
+	}
+	return m
 }
 
 func firstIntegerSum(n int) int {
@@ -423,45 +529,32 @@ func firstIntegerSum(n int) int {
 func isInTheShape(p Position, rowsRanges, colsRanges map[int][]int) bool {
 	countCrossedEdges := 0
 	// first check if p is exactly on an edge
-	rowRange, ok := rowsRanges[p.Y]
-	if ok &&
-		p.X >= rowRange[0] &&
-		p.X <= rowRange[1] {
-		// p is located on an horizontal edge
-		return true
+	extendedRows := extendRows(rowsRanges, colsRanges)
+	rowRange, ok := extendedRows[p.Y]
+	if ok {
+		for i := 0; i < len(rowRange)/2; i++ {
+			if p.X >= rowRange[i] &&
+				p.X <= rowRange[i+1] {
+				// p is located on an horizontal edge
+				return true
+			}
+		}
+		return false
 	}
 
 	// the point is not on an edge, we can proceed with the winding
-	for y := p.Y; y >= 0; y-- {
-		rowRange, ok := rowsRanges[y]
+	// the point is moved on the x axis from its position to the left of the board
+	for x := p.X; x >= 0; x-- {
+		colRange, ok := colsRanges[x]
 		if !ok {
 			// no edge on this row
 			continue
 		}
 
-		if p.X >= rowRange[0] && p.X <= rowRange[1] {
+		slices.Sort(colRange)
+		if p.Y >= colRange[0] && p.Y <= colRange[1] {
 			// we crossed an horizontal edge
 			countCrossedEdges++
-		}
-
-		// if we reached the bottom of a vertical edge,
-		// we move y to the upper vertical corner
-		if p.X == rowRange[0] || p.X == rowRange[1] {
-			// is there another corner at the same column?
-			nextY := -1
-			for yy := y - 1; yy >= 0; yy-- {
-				rr, ok := rowsRanges[yy]
-				if !ok {
-					continue
-				}
-				if rr[0] == p.X || rr[1] == p.X {
-					nextY = yy
-					break
-				}
-			}
-			if nextY != -1 {
-				y = nextY
-			}
 		}
 	}
 
@@ -616,11 +709,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	draw(pixels)
 	screen.WritePixels(pixels)
 
-	// draw candidate rectangle
-	drawCandidateRectangle(screen)
-
 	// draw biggest area rectangle
 	drawBiggestAreaRectangle(screen)
+
+	// draw candidate rectangle
+	drawCandidateRectangle(screen)
 
 	// display info
 	if info {
