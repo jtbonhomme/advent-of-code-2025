@@ -326,19 +326,13 @@ func computeRowsRanges(positions []Position) map[int][]int {
 
 func computeColsRanges(positions []Position) map[int][]int {
 	colsRanges := make(map[int][]int) // X -> [minY, maxY]
-	// get first couple of positions (superior horizontal shape edge)
-	lastP1 := positions[0]
-	lastP2 := positions[1]
-	colsRanges[lastP1.X] = []int{lastP1.Y, lastP2.Y}
 
-	for i := 1; i < len(positions)/2; i++ {
-		p1 := positions[i*2]
-		p2 := positions[i*2+1]
-		colsRanges[p1.X] = []int{p1.Y, p2.Y}
-		// sort y from colRange
-		slices.Sort(colsRanges[p1.X])
-		lastP1 = p1
-		lastP2 = p2
+	for i := 0; i < len(positions); i++ {
+		for j := i + 1; j < len(positions); j++ {
+			if positions[j].X == positions[i].X {
+				colsRanges[positions[i].X] = []int{positions[i].Y, positions[j].Y}
+			}
+		}
 	}
 
 	return colsRanges
@@ -424,14 +418,8 @@ func getScaleFactor() float64 {
 	maxX := getMaxX(positions)
 	maxY := getMaxY(positions)
 
-	scaleX := 1.0
-	if maxX+minX >= screenWidth {
-		scaleX = float64(screenWidth) / float64(maxX+minX+1)
-	}
-	scaleY := 1.0
-	if maxY+minY >= screenHeight {
-		scaleY = float64(screenHeight) / float64(maxY+minY+1)
-	}
+	scaleX := float64(screenWidth) / float64(maxX+minX+1)
+	scaleY := float64(screenHeight) / float64(maxY+minY+1)
 
 	scale := scaleX
 	if scaleY < scaleX {
@@ -457,36 +445,19 @@ func draw(pixels []byte) {
 
 	scale := getScaleFactor()
 
-	// draw positions
-	/*
-		for _, p := range positions {
-			scaledX := int(float64(p.X) * scale)
-			scaledY := int(float64(p.Y) * scale)
-			p := Position{X: scaledX, Y: scaledY}
-			if p.X < 0 || p.X >= screenWidth || p.Y < 0 || p.Y >= screenHeight {
-				continue
-			}
-			idx := (p.Y*screenWidth + p.X) * 4
-			pixels[idx] = 0xff   // R
-			pixels[idx+1] = 0x1f // G
-			pixels[idx+2] = 0x1f // B
-			pixels[idx+3] = 0x1f // A
-		}*/
-
 	// draw rows ranges
 	for y, rowRange := range rowsRanges {
 		scaledY := int(float64(y) * scale)
 		if scaledY < 0 || scaledY >= screenHeight {
 			continue
 		}
-		for x := rowRange[0]; x <= rowRange[1]; x++ {
-			scaledX := int(float64(x) * scale)
-			if scaledX < 0 || scaledX >= screenWidth {
+		for x := int(float64(rowRange[0]) * scale); x <= int(float64(rowRange[1])*scale); x++ {
+			if x < 0 || x >= screenWidth {
 				continue
 			}
-			idx := (scaledY*screenWidth + scaledX) * 4
-			pixels[idx] = 0x11   // R
-			pixels[idx+1] = 0x11 // G
+			idx := (scaledY*screenWidth + x) * 4
+			pixels[idx] = 0x81   // R
+			pixels[idx+1] = 0x81 // G
 			pixels[idx+2] = 0xf1 // B
 			pixels[idx+3] = 0x60 // A
 		}
@@ -498,18 +469,34 @@ func draw(pixels []byte) {
 		if scaledX < 0 || scaledX >= screenWidth {
 			continue
 		}
-		for y := colRange[0]; y <= colRange[1]; y++ {
-			scaledY := int(float64(y) * scale)
-			if scaledY < 0 || scaledY >= screenHeight {
+		for y := int(float64(colRange[0]) * scale); y <= int(float64(colRange[1])*scale); y++ {
+			if y < 0 || y >= screenHeight {
 				continue
 			}
-			idx := (scaledY*screenWidth + scaledX) * 4
-			pixels[idx] = 0x11   // R
-			pixels[idx+1] = 0x11 // G
+			idx := (y*screenWidth + scaledX) * 4
+			pixels[idx] = 0x81   // R
+			pixels[idx+1] = 0x81 // G
 			pixels[idx+2] = 0xf1 // B
 			pixels[idx+3] = 0x60 // A
 		}
 	}
+
+	// draw positions
+
+	for _, p := range positions {
+		scaledX := int(float64(p.X) * scale)
+		scaledY := int(float64(p.Y) * scale)
+		p := Position{X: scaledX, Y: scaledY}
+		if p.X < 0 || p.X >= screenWidth || p.Y < 0 || p.Y >= screenHeight {
+			continue
+		}
+		idx := (p.Y*screenWidth + p.X) * 4
+		pixels[idx] = 0xff   // R
+		pixels[idx+1] = 0x1f // G
+		pixels[idx+2] = 0x1f // B
+		pixels[idx+3] = 0x1f // A
+	}
+
 }
 
 func run(i string) int {
@@ -561,6 +548,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func main() {
 	flag.StringVar(&inputfile, "input", "input.txt", "input file")
+	flag.BoolVar(&test, "test", false, "input file")
 	flag.Parse()
 	g := &Game{}
 
