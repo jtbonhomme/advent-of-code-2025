@@ -223,6 +223,19 @@ func displayBoardWithRectangle(positions []Position, p1, p2 Position) {
 	}
 }
 
+func norm(p1, p2 Position) Position {
+	var dx, dy int
+
+	if p1.X != p2.X {
+		dx = (p2.X - p1.X) / abs(p2.X-p1.X)
+	}
+	if p1.Y != p2.Y {
+		dy = (p2.Y - p1.Y) / abs(p2.Y-p1.Y)
+	}
+
+	return Position{X: dx, Y: dy}
+}
+
 func processLines(positions []Position) int {
 	var maxArea int = -1
 
@@ -261,8 +274,8 @@ func processLines(positions []Position) int {
 	fmt.Println("computeRowsRanges")
 	rowsRanges = computeRowsRanges(positions)
 	colsRanges = computeColsRanges(positions)
-	fmt.Printf("found %d rows ranges: %v\n", len(rowsRanges), rowsRanges)
-	fmt.Printf("found %d cols ranges: %v\n", len(colsRanges), colsRanges)
+	debug("found %d rows ranges: %v\n", len(rowsRanges), rowsRanges)
+	debug("found %d cols ranges: %v\n", len(colsRanges), colsRanges)
 	//displayBoard(positions)
 
 	fmt.Println("find all rectangles that can be formed within the new positions")
@@ -291,7 +304,7 @@ func processLines(positions []Position) int {
 				Y2: float32(p2.Y),
 			}
 
-			// we need to make sure:
+			// we need to make sure that:
 			// A) the two other corners are also in the shape
 			if !isInTheShape(otherCorner1, rowsRanges, colsRanges) {
 				debug("  other corner %v is NOT in the shape\n", otherCorner1)
@@ -301,31 +314,37 @@ func processLines(positions []Position) int {
 				debug("  other corner %v is NOT in the shape\n", otherCorner2)
 				continue
 			}
-			// B) the center of each edge of the rectangle is included in the shape
+
+			// B) the interior of the rectangle is included in the shape
 			// top edge center
-			topEdgeCenter := Position{X: (p1.X + p2.X) / 2, Y: p1.Y}
-			if !isInTheShape(topEdgeCenter, rowsRanges, colsRanges) {
-				debug("  top edge center %v is NOT in the shape\n", topEdgeCenter)
+			p1ToP2 := norm(p1, p2)
+			testP1 := Position{X: p1.X + p1ToP2.X, Y: p1.Y + p1ToP2.Y}
+			if !isInTheShape(testP1, rowsRanges, colsRanges) {
+				debug("  top edge center %v is NOT in the shape\n", testP1)
 				continue
 			}
 			// bottom edge center
-			bottomEdgeCenter := Position{X: (p1.X + p2.X) / 2, Y: p2.Y}
-			if !isInTheShape(bottomEdgeCenter, rowsRanges, colsRanges) {
-				debug("  bottom edge center %v is NOT in the shape\n", bottomEdgeCenter)
+			p2ToP1 := norm(p2, p1)
+			testP2 := Position{X: p2.X + p2ToP1.X, Y: p2.Y + p2ToP1.Y}
+			if !isInTheShape(testP2, rowsRanges, colsRanges) {
+				debug("  bottom edge center %v is NOT in the shape\n", testP2)
 				continue
 			}
 			// left edge center
-			leftEdgeCenter := Position{X: p1.X, Y: (p1.Y + p2.Y) / 2}
-			if !isInTheShape(leftEdgeCenter, rowsRanges, colsRanges) {
-				debug("  left edge center %v is NOT in the shape\n", leftEdgeCenter)
+			otherCorner1TOotherCorner2 := norm(otherCorner1, otherCorner2)
+			testOtherCorner1 := Position{X: otherCorner1.X + otherCorner1TOotherCorner2.X, Y: otherCorner1.Y + otherCorner1TOotherCorner2.Y}
+			if !isInTheShape(testOtherCorner1, rowsRanges, colsRanges) {
+				debug("  left edge center %v is NOT in the shape\n", testOtherCorner1)
 				continue
 			}
 			// right edge center
-			rightEdgeCenter := Position{X: p2.X, Y: (p1.Y + p2.Y) / 2}
-			if !isInTheShape(rightEdgeCenter, rowsRanges, colsRanges) {
-				debug("  right edge center %v is NOT in the shape\n", rightEdgeCenter)
+			otherCorner2TOotherCorner1 := norm(otherCorner2, otherCorner1)
+			testOtherCorner2 := Position{X: otherCorner2.X + otherCorner2TOotherCorner1.X, Y: otherCorner2.Y + otherCorner2TOotherCorner1.Y}
+			if !isInTheShape(testOtherCorner2, rowsRanges, colsRanges) {
+				debug("  right edge center %v is NOT in the shape\n", testOtherCorner2)
 				continue
 			}
+
 			// C) the center of the rectangle is also in the shape
 			center := Position{X: (p1.X + p2.X) / 2, Y: (p1.Y + p2.Y) / 2}
 			if !isInTheShape(center, rowsRanges, colsRanges) {
