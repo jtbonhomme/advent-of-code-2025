@@ -20,7 +20,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/schollz/progressbar/v3"
 )
 
 const (
@@ -268,7 +267,6 @@ func processLines(positions []Position) int {
 
 	fmt.Println("find all rectangles that can be formed within the new positions")
 	ops := 0
-	bar := progressbar.Default(int64(firstIntegerSum(len(positions))))
 	for i, p1 := range positions {
 		area := 0
 		for j, p2 := range positions {
@@ -276,10 +274,9 @@ func processLines(positions []Position) int {
 				continue
 			}
 			debug("testing positions: %v and %v\n", p1, p2)
-			bar.Add(1)
 			ops++
 			if test {
-				time.Sleep(time.Duration(500 * time.Millisecond))
+				time.Sleep(time.Duration(250 * time.Millisecond))
 			}
 
 			// We pick two positions that represents the opposite corners of a rectangle
@@ -304,7 +301,31 @@ func processLines(positions []Position) int {
 				debug("  other corner %v is NOT in the shape\n", otherCorner2)
 				continue
 			}
-			// B) each edge of the rectangle is included in the shape
+			// B) the center of each edge of the rectangle is included in the shape
+			// top edge center
+			topEdgeCenter := Position{X: (p1.X + p2.X) / 2, Y: p1.Y}
+			if !isInTheShape(topEdgeCenter, rowsRanges, colsRanges) {
+				debug("  top edge center %v is NOT in the shape\n", topEdgeCenter)
+				continue
+			}
+			// bottom edge center
+			bottomEdgeCenter := Position{X: (p1.X + p2.X) / 2, Y: p2.Y}
+			if !isInTheShape(bottomEdgeCenter, rowsRanges, colsRanges) {
+				debug("  bottom edge center %v is NOT in the shape\n", bottomEdgeCenter)
+				continue
+			}
+			// left edge center
+			leftEdgeCenter := Position{X: p1.X, Y: (p1.Y + p2.Y) / 2}
+			if !isInTheShape(leftEdgeCenter, rowsRanges, colsRanges) {
+				debug("  left edge center %v is NOT in the shape\n", leftEdgeCenter)
+				continue
+			}
+			// right edge center
+			rightEdgeCenter := Position{X: p2.X, Y: (p1.Y + p2.Y) / 2}
+			if !isInTheShape(rightEdgeCenter, rowsRanges, colsRanges) {
+				debug("  right edge center %v is NOT in the shape\n", rightEdgeCenter)
+				continue
+			}
 			// C) the center of the rectangle is also in the shape
 			center := Position{X: (p1.X + p2.X) / 2, Y: (p1.Y + p2.Y) / 2}
 			if !isInTheShape(center, rowsRanges, colsRanges) {
@@ -362,7 +383,7 @@ func drawCandidateRectangle(screen *ebiten.Image) {
 	boardY := float32(float64(rectY) * scale)
 	width := float32(float64(rectWidth) * scale)
 	height := float32(float64(rectHeight) * scale)
-	vector.StrokeRect(screen, boardX, boardY, width, height, 0.2, color.RGBA{R: 150, G: 150, B: 150, A: 30}, false)
+	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 50, G: 50, B: 50, A: 30}, false)
 }
 
 func drawBiggestAreaRectangle(screen *ebiten.Image) {
@@ -385,7 +406,7 @@ func drawBiggestAreaRectangle(screen *ebiten.Image) {
 	boardY := float32(float64(rectY) * scale)
 	width := float32(float64(rectWidth) * scale)
 	height := float32(float64(rectHeight) * scale)
-	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 50, G: 50, B: 50, A: 30}, false)
+	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 150, G: 150, B: 150, A: 30}, false)
 }
 
 func computeRowsRanges(positions []Position) map[int][]int {
@@ -422,10 +443,7 @@ func computeColsRanges(positions []Position) map[int][]int {
 	return colsRanges
 }
 
-func extendRows(
-	rowsRanges map[int][]int,
-	colsRanges map[int][]int,
-) map[int][]int {
+func extendRows(rowsRanges, colsRanges map[int][]int) map[int][]int {
 
 	extended := make(map[int][]int, len(rowsRanges))
 
@@ -450,10 +468,7 @@ func extendRows(
 	return extended
 }
 
-func extendCols(
-	colsRanges map[int][]int,
-	rowsRanges map[int][]int,
-) map[int][]int {
+func extendCols(colsRanges, rowsRanges map[int][]int) map[int][]int {
 
 	extended := make(map[int][]int, len(colsRanges))
 
