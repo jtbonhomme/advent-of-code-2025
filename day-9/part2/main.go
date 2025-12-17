@@ -572,6 +572,14 @@ func getScaleFactor() float64 {
 	return scale
 }
 
+func convertBoardToGameDimension(p Position) (int, int) {
+	scale := getScaleFactor()
+	boardX := int(float64(p.X) / scale)
+	boardY := int(float64(p.Y) / scale)
+
+	return boardX, boardY
+}
+
 func (g *Game) draw(pixels []byte) {
 	if len(pixels) != screenWidth*screenHeight*4 {
 		log.Fatalf("pixels length is %d, expected %d", len(pixels), screenWidth*screenHeight*4)
@@ -586,13 +594,17 @@ func (g *Game) draw(pixels []byte) {
 		return
 	}
 
+	// Calculate camera offset to center the camera position on screen
+	camOffsetX := float64(g.camX) - float64(screenWidth)/(2*g.camScale)
+	camOffsetY := float64(g.camY) - float64(screenHeight)/(2*g.camScale)
+
 	// draw rows ranges
 	for y, rowRange := range rowsRanges {
-		scaledY := int(float64(y) * g.camScale)
+		scaledY := int((float64(y) - camOffsetY) * g.camScale)
 		if scaledY < 0 || scaledY >= screenHeight {
 			continue
 		}
-		for x := int(float64(rowRange[0]) * g.camScale); x <= int(float64(rowRange[1])*g.camScale); x++ {
+		for x := int((float64(rowRange[0]) - camOffsetX) * g.camScale); x <= int((float64(rowRange[1])-camOffsetX)*g.camScale); x++ {
 			if x < 0 || x >= screenWidth {
 				continue
 			}
@@ -606,11 +618,11 @@ func (g *Game) draw(pixels []byte) {
 
 	// draw cols ranges
 	for x, colRange := range colsRanges {
-		scaledX := int(float64(x) * g.camScale)
+		scaledX := int((float64(x) - camOffsetX) * g.camScale)
 		if scaledX < 0 || scaledX >= screenWidth {
 			continue
 		}
-		for y := int(float64(colRange[0]) * g.camScale); y <= int(float64(colRange[1])*g.camScale); y++ {
+		for y := int((float64(colRange[0]) - camOffsetY) * g.camScale); y <= int((float64(colRange[1])-camOffsetY)*g.camScale); y++ {
 			if y < 0 || y >= screenHeight {
 				continue
 			}
@@ -623,70 +635,61 @@ func (g *Game) draw(pixels []byte) {
 	}
 
 	// draw positions
-
 	for _, p := range positions {
-		scaledX := int(float64(p.X) * g.camScale)
-		scaledY := int(float64(p.Y) * g.camScale)
-		p := Position{X: scaledX, Y: scaledY}
-		if p.X < 0 || p.X >= screenWidth || p.Y < 0 || p.Y >= screenHeight {
+		scaledX := int((float64(p.X) - camOffsetX) * g.camScale)
+		scaledY := int((float64(p.Y) - camOffsetY) * g.camScale)
+		if scaledX < 0 || scaledX >= screenWidth || scaledY < 0 || scaledY >= screenHeight {
 			continue
 		}
-		idx := (p.Y*screenWidth + p.X) * 4
+		idx := (scaledY*screenWidth + scaledX) * 4
 		pixels[idx] = 0xff   // R
 		pixels[idx+1] = 0x1f // G
 		pixels[idx+2] = 0x1f // B
 		pixels[idx+3] = 0x1f // A
 	}
-
-}
-
-func convertBoardToGameDimension(p Position) (int, int) {
-	scale := getScaleFactor()
-	boardX := int(float64(p.X) / scale)
-	boardY := int(float64(p.Y) / scale)
-
-	return boardX, boardY
 }
 
 func (g *Game) drawCandidateRectangle(screen *ebiten.Image) {
+	// Calculate camera offset
+	camOffsetX := float64(g.camX) - float64(screenWidth)/(2*g.camScale)
+	camOffsetY := float64(g.camY) - float64(screenHeight)/(2*g.camScale)
+
 	// candidate rectangle is defined by 2 opposite corners (X1,Y1) and (X2,Y2)
-	// let's compute the two other corners.
 	otherP1X := candidateRectangle.X1
 	otherP1Y := candidateRectangle.Y2
 	otherP2X := candidateRectangle.X2
 	otherP2Y := candidateRectangle.Y1
-
-	// where is the top left corner?
 
 	rectX := float32(min(int(candidateRectangle.X1), int(otherP1X), int(otherP2X)))
 	rectY := float32(min(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y)))
 	rectWidth := float32(abs(max(int(candidateRectangle.X1), int(otherP1X), int(otherP2X)) - min(int(candidateRectangle.X1), int(otherP1X), int(otherP2X))))
 	rectHeight := float32(abs(max(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y)) - min(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y))))
 
-	boardX := float32(float64(rectX) * g.camScale)
-	boardY := float32(float64(rectY) * g.camScale)
+	boardX := float32((float64(rectX) - camOffsetX) * g.camScale)
+	boardY := float32((float64(rectY) - camOffsetY) * g.camScale)
 	width := float32(float64(rectWidth) * g.camScale)
 	height := float32(float64(rectHeight) * g.camScale)
 	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 50, G: 50, B: 50, A: 30}, false)
 }
 
 func (g *Game) drawBiggestAreaRectangle(screen *ebiten.Image) {
+	// Calculate camera offset
+	camOffsetX := float64(g.camX) - float64(screenWidth)/(2*g.camScale)
+	camOffsetY := float64(g.camY) - float64(screenHeight)/(2*g.camScale)
+
 	// candidate rectangle is defined by 2 opposite corners (X1,Y1) and (X2,Y2)
-	// let's compute the two other corners.
 	otherP1X := maxAreaRectangle.X1
 	otherP1Y := maxAreaRectangle.Y2
 	otherP2X := maxAreaRectangle.X2
 	otherP2Y := maxAreaRectangle.Y1
-
-	// where is the top left corner?
 
 	rectX := float32(min(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X)))
 	rectY := float32(min(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y)))
 	rectWidth := float32(abs(max(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X)) - min(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X))))
 	rectHeight := float32(abs(max(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y)) - min(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y))))
 
-	boardX := float32(float64(rectX) * g.camScale)
-	boardY := float32(float64(rectY) * g.camScale)
+	boardX := float32((float64(rectX) - camOffsetX) * g.camScale)
+	boardY := float32((float64(rectY) - camOffsetY) * g.camScale)
 	width := float32(float64(rectWidth) * g.camScale)
 	height := float32(float64(rectHeight) * g.camScale)
 	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 150, G: 150, B: 150, A: 30}, false)
@@ -789,16 +792,16 @@ func (g *Game) Update() error {
 
 	// Pan camera via keyboard.
 	pan := 7.0 / g.camScale
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
 		g.camX -= int(pan)
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		g.camX += int(pan)
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
+	if ebiten.IsKeyPressed(ebiten.KeyUp) {
 		g.camY -= int(pan)
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+	if ebiten.IsKeyPressed(ebiten.KeyDown) {
 		g.camY += int(pan)
 	}
 
