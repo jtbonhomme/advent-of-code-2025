@@ -355,6 +355,54 @@ func processLines(positions []Position) int {
 				continue
 			}
 
+			// D) each edge of the rectangle do not cross any vertical or horizontal edge of the shape.
+			// To optimize the check, we can scan only rows and cols that are in the ranges of the rectangle
+			crossesEdge := false
+			// scan rows within rectangle Y range
+			ymin := min(p1.Y, p2.Y)
+			ymax := max(p1.Y, p2.Y)
+			for y := ymin; y <= ymax; y++ {
+				rowRange, ok := rowsRanges[y]
+				if !ok {
+					// no edge on this row
+					continue
+				}
+				slices.Sort(rowRange)
+				// check if rowRange crosses left or right edge of rectangle
+				if (rowRange[0] > min(p1.X, p2.X) && rowRange[0] < max(p1.X, p2.X)) ||
+					(rowRange[1] > min(p1.X, p2.X) && rowRange[1] < max(p1.X, p2.X)) {
+					debug("  row %d range %v crosses horizontal edge of rectangle\n", y, rowRange)
+					crossesEdge = true
+					break
+				}
+			}
+			if crossesEdge {
+				continue
+			}
+
+			// scan cols within rectangle X range
+			xmin := min(p1.X, p2.X)
+			xmax := max(p1.X, p2.X)
+			for x := xmin; x <= xmax; x++ {
+				colRange, ok := colsRanges[x]
+				if !ok {
+					// no edge on this column
+					continue
+				}
+				slices.Sort(colRange)
+				// check if colRange crosses top or bottom edge of rectangle
+				if (colRange[0] > min(p1.Y, p2.Y) && colRange[0] < max(p1.Y, p2.Y)) ||
+					(colRange[1] > min(p1.Y, p2.Y) && colRange[1] < max(p1.Y, p2.Y)) {
+					debug("  column %d range %v crosses vertical edge of rectangle\n", x, colRange)
+					crossesEdge = true
+					break
+				}
+			}
+			if crossesEdge {
+				continue
+			}
+
+			// all checks passed, we have a valid rectangle
 			displayBoardWithRectangle(positions, p1, p2)
 
 			// this rectangle is valid, compute area and compare to max area
