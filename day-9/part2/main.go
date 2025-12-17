@@ -29,6 +29,8 @@ const (
 )
 
 type Game struct {
+	camX, camY           int
+	camScale, camScaleTo float64
 }
 
 var isStarted bool
@@ -278,7 +280,8 @@ func processLines(positions []Position) int {
 	debug("found %d cols ranges: %v\n", len(colsRanges), colsRanges)
 	//displayBoard(positions)
 
-	fmt.Println("find all rectangles that can be formed within the new positions")
+	fmt.Printf("Find all rectangles that can be formed within the positions (%d)\n", len(positions))
+	startTime := time.Now()
 	ops := 0
 	for i, p1 := range positions {
 		area := 0
@@ -365,67 +368,13 @@ func processLines(positions []Position) int {
 			if area > maxArea {
 				maxArea = area
 				maxAreaRectangle = candidateRectangle
-				debug("  New MAX AREA: %d\n\n", maxArea)
+				fmt.Printf("-  new max area: %d for rectangle %+v\n", maxArea, maxAreaRectangle)
 			}
 		}
 	}
 
-	debug("Total operations: %d\n", ops)
+	fmt.Printf("Total operations %d performed in %s\n", ops, time.Since(startTime))
 	return maxArea
-}
-
-func getBoardDimension(p Position) (int, int) {
-	scale := getScaleFactor()
-	boardX := int(float64(p.X) / scale)
-	boardY := int(float64(p.Y) / scale)
-
-	return boardX, boardY
-}
-
-func drawCandidateRectangle(screen *ebiten.Image) {
-	// candidate rectangle is defined by 2 opposite corners (X1,Y1) and (X2,Y2)
-	// let's compute the two other corners.
-	otherP1X := candidateRectangle.X1
-	otherP1Y := candidateRectangle.Y2
-	otherP2X := candidateRectangle.X2
-	otherP2Y := candidateRectangle.Y1
-
-	// where is the top left corner?
-
-	rectX := float32(min(int(candidateRectangle.X1), int(otherP1X), int(otherP2X)))
-	rectY := float32(min(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y)))
-	rectWidth := float32(abs(max(int(candidateRectangle.X1), int(otherP1X), int(otherP2X)) - min(int(candidateRectangle.X1), int(otherP1X), int(otherP2X))))
-	rectHeight := float32(abs(max(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y)) - min(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y))))
-
-	scale := getScaleFactor()
-	boardX := float32(float64(rectX) * scale)
-	boardY := float32(float64(rectY) * scale)
-	width := float32(float64(rectWidth) * scale)
-	height := float32(float64(rectHeight) * scale)
-	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 50, G: 50, B: 50, A: 30}, false)
-}
-
-func drawBiggestAreaRectangle(screen *ebiten.Image) {
-	// candidate rectangle is defined by 2 opposite corners (X1,Y1) and (X2,Y2)
-	// let's compute the two other corners.
-	otherP1X := maxAreaRectangle.X1
-	otherP1Y := maxAreaRectangle.Y2
-	otherP2X := maxAreaRectangle.X2
-	otherP2Y := maxAreaRectangle.Y1
-
-	// where is the top left corner?
-
-	rectX := float32(min(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X)))
-	rectY := float32(min(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y)))
-	rectWidth := float32(abs(max(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X)) - min(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X))))
-	rectHeight := float32(abs(max(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y)) - min(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y))))
-
-	scale := getScaleFactor()
-	boardX := float32(float64(rectX) * scale)
-	boardY := float32(float64(rectY) * scale)
-	width := float32(float64(rectWidth) * scale)
-	height := float32(float64(rectHeight) * scale)
-	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 150, G: 150, B: 150, A: 30}, false)
 }
 
 func computeRowsRanges(positions []Position) map[int][]int {
@@ -599,6 +548,13 @@ func isInTheShape(p Position, rowsRanges, colsRanges map[int][]int) bool {
 
 var positions []Position
 
+func getBoardDimension() (int, int) {
+	maxX := getMaxX(positions)
+	maxY := getMaxY(positions)
+
+	return int(maxX), int(maxY)
+}
+
 func getScaleFactor() float64 {
 	minX := getMinX(positions)
 	minY := getMinY(positions)
@@ -616,7 +572,7 @@ func getScaleFactor() float64 {
 	return scale
 }
 
-func draw(pixels []byte) {
+func (g *Game) draw(pixels []byte) {
 	if len(pixels) != screenWidth*screenHeight*4 {
 		log.Fatalf("pixels length is %d, expected %d", len(pixels), screenWidth*screenHeight*4)
 	}
@@ -630,15 +586,13 @@ func draw(pixels []byte) {
 		return
 	}
 
-	scale := getScaleFactor()
-
 	// draw rows ranges
 	for y, rowRange := range rowsRanges {
-		scaledY := int(float64(y) * scale)
+		scaledY := int(float64(y) * g.camScale)
 		if scaledY < 0 || scaledY >= screenHeight {
 			continue
 		}
-		for x := int(float64(rowRange[0]) * scale); x <= int(float64(rowRange[1])*scale); x++ {
+		for x := int(float64(rowRange[0]) * g.camScale); x <= int(float64(rowRange[1])*g.camScale); x++ {
 			if x < 0 || x >= screenWidth {
 				continue
 			}
@@ -652,11 +606,11 @@ func draw(pixels []byte) {
 
 	// draw cols ranges
 	for x, colRange := range colsRanges {
-		scaledX := int(float64(x) * scale)
+		scaledX := int(float64(x) * g.camScale)
 		if scaledX < 0 || scaledX >= screenWidth {
 			continue
 		}
-		for y := int(float64(colRange[0]) * scale); y <= int(float64(colRange[1])*scale); y++ {
+		for y := int(float64(colRange[0]) * g.camScale); y <= int(float64(colRange[1])*g.camScale); y++ {
 			if y < 0 || y >= screenHeight {
 				continue
 			}
@@ -671,8 +625,8 @@ func draw(pixels []byte) {
 	// draw positions
 
 	for _, p := range positions {
-		scaledX := int(float64(p.X) * scale)
-		scaledY := int(float64(p.Y) * scale)
+		scaledX := int(float64(p.X) * g.camScale)
+		scaledY := int(float64(p.Y) * g.camScale)
 		p := Position{X: scaledX, Y: scaledY}
 		if p.X < 0 || p.X >= screenWidth || p.Y < 0 || p.Y >= screenHeight {
 			continue
@@ -686,9 +640,67 @@ func draw(pixels []byte) {
 
 }
 
-func run(i string) int {
+func convertBoardToGameDimension(p Position) (int, int) {
+	scale := getScaleFactor()
+	boardX := int(float64(p.X) / scale)
+	boardY := int(float64(p.Y) / scale)
+
+	return boardX, boardY
+}
+
+func (g *Game) drawCandidateRectangle(screen *ebiten.Image) {
+	// candidate rectangle is defined by 2 opposite corners (X1,Y1) and (X2,Y2)
+	// let's compute the two other corners.
+	otherP1X := candidateRectangle.X1
+	otherP1Y := candidateRectangle.Y2
+	otherP2X := candidateRectangle.X2
+	otherP2Y := candidateRectangle.Y1
+
+	// where is the top left corner?
+
+	rectX := float32(min(int(candidateRectangle.X1), int(otherP1X), int(otherP2X)))
+	rectY := float32(min(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y)))
+	rectWidth := float32(abs(max(int(candidateRectangle.X1), int(otherP1X), int(otherP2X)) - min(int(candidateRectangle.X1), int(otherP1X), int(otherP2X))))
+	rectHeight := float32(abs(max(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y)) - min(int(candidateRectangle.Y1), int(otherP1Y), int(otherP2Y))))
+
+	boardX := float32(float64(rectX) * g.camScale)
+	boardY := float32(float64(rectY) * g.camScale)
+	width := float32(float64(rectWidth) * g.camScale)
+	height := float32(float64(rectHeight) * g.camScale)
+	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 50, G: 50, B: 50, A: 30}, false)
+}
+
+func (g *Game) drawBiggestAreaRectangle(screen *ebiten.Image) {
+	// candidate rectangle is defined by 2 opposite corners (X1,Y1) and (X2,Y2)
+	// let's compute the two other corners.
+	otherP1X := maxAreaRectangle.X1
+	otherP1Y := maxAreaRectangle.Y2
+	otherP2X := maxAreaRectangle.X2
+	otherP2Y := maxAreaRectangle.Y1
+
+	// where is the top left corner?
+
+	rectX := float32(min(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X)))
+	rectY := float32(min(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y)))
+	rectWidth := float32(abs(max(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X)) - min(int(maxAreaRectangle.X1), int(otherP1X), int(otherP2X))))
+	rectHeight := float32(abs(max(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y)) - min(int(maxAreaRectangle.Y1), int(otherP1Y), int(otherP2Y))))
+
+	boardX := float32(float64(rectX) * g.camScale)
+	boardY := float32(float64(rectY) * g.camScale)
+	width := float32(float64(rectWidth) * g.camScale)
+	height := float32(float64(rectHeight) * g.camScale)
+	vector.FillRect(screen, boardX, boardY, width, height, color.RGBA{R: 150, G: 150, B: 150, A: 30}, false)
+}
+
+func (g *Game) run(i string) int {
 	fmt.Println("parsing input...")
 	positions = parseLines(i)
+	g.camScale = getScaleFactor()
+	g.camScaleTo = g.camScale
+	boardX, boardY := getBoardDimension()
+	g.camX = boardX / 2
+	g.camY = boardY / 2
+
 	fmt.Println("processing input...")
 	answer := processLines(positions)
 	fmt.Println("... done")
@@ -697,7 +709,7 @@ func run(i string) int {
 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		return fmt.Errorf("game ended by user")
+		return fmt.Errorf("ended by user")
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyI) {
@@ -706,7 +718,7 @@ func (g *Game) Update() error {
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
-		boardX, boardY := getBoardDimension(Position{X: x, Y: y})
+		boardX, boardY := convertBoardToGameDimension(Position{X: x, Y: y})
 		fmt.Printf("mouse clicked at pixel (%d,%d) -> board position (%d,%d)\n", x, y, boardX, boardY)
 		res := isInTheShape(Position{X: boardX, Y: boardY}, rowsRanges, colsRanges)
 		if res {
@@ -717,15 +729,77 @@ func (g *Game) Update() error {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeySpace) {
-		fmt.Println("starting processing...")
 		if !isStarted {
+			fmt.Println("starting processing...")
 			isStarted = true
 			go func() {
 				data, _ := inputs.ReadFile(inputfile)
-				answer := run(string(data))
+				answer := g.run(string(data))
 				fmt.Println("Answer: ", answer)
 			}()
 		}
+	}
+
+	// Update target zoom level.
+	var scrollY float64
+	if ebiten.IsKeyPressed(ebiten.KeyC) || ebiten.IsKeyPressed(ebiten.KeyPageDown) {
+		scrollY = -0.25
+	} else if ebiten.IsKeyPressed(ebiten.KeyE) || ebiten.IsKeyPressed(ebiten.KeyPageUp) {
+		scrollY = .25
+	} else {
+		_, scrollY = ebiten.Wheel()
+		if scrollY < -1 {
+			scrollY = -1
+		} else if scrollY > 1 {
+			scrollY = 1
+		}
+	}
+	g.camScaleTo += scrollY * (g.camScaleTo / 7)
+
+	// Clamp target zoom level.
+	minScale := getScaleFactor()
+	maxScale := 0.1
+	if g.camScaleTo < minScale {
+		g.camScaleTo = minScale
+	} else if g.camScaleTo > maxScale {
+		g.camScaleTo = maxScale
+	}
+
+	// Smooth zoom transition.
+	div := 10.0
+	if g.camScaleTo > g.camScale {
+		g.camScale += (g.camScaleTo - g.camScale) / div
+	} else if g.camScaleTo < g.camScale {
+		g.camScale -= (g.camScale - g.camScaleTo) / div
+	}
+
+	// Clamp camera position.
+	boardX, boardY := getBoardDimension()
+
+	if g.camX < 0 {
+		g.camX = 0
+	} else if g.camX > boardX {
+		g.camX = boardX
+	}
+	if g.camY < 0 {
+		g.camY = 0
+	} else if g.camY > boardY {
+		g.camY = boardY
+	}
+
+	// Pan camera via keyboard.
+	pan := 7.0 / g.camScale
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+		g.camX -= int(pan)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+		g.camX += int(pan)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
+		g.camY -= int(pan)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+		g.camY += int(pan)
 	}
 
 	return nil
@@ -740,20 +814,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// draw background
-	draw(pixels)
+	g.draw(pixels)
 	screen.WritePixels(pixels)
 
 	// draw biggest area rectangle
-	drawBiggestAreaRectangle(screen)
+	g.drawBiggestAreaRectangle(screen)
 
 	// draw candidate rectangle
-	drawCandidateRectangle(screen)
+	g.drawCandidateRectangle(screen)
 
 	// display info
 	if info {
 		x, y := ebiten.CursorPosition()
-		boardX, boardY := getBoardDimension(Position{X: x, Y: y})
-		ebitenutil.DebugPrint(screen, fmt.Sprintf("minX: %d - maxX: %d\nminY: %d - maxY: %d\nscale factor: %0.6f\npos: %d, %d | %d, %d", getMinX(positions), getMaxX(positions), getMinY(positions), getMaxY(positions), getScaleFactor(), x, y, boardX, boardY))
+		boardX, boardY := convertBoardToGameDimension(Position{X: x, Y: y})
+		ebitenutil.DebugPrint(screen, fmt.Sprintf("minX: %d - maxX: %d\nminY: %d - maxY: %d\nscale factor: %0.6f\ncam: %d, %d\npos: %d, %d | %d, %d", getMinX(positions), getMaxX(positions), getMinY(positions), getMaxY(positions), g.camScale, g.camX, g.camY, x, y, boardX, boardY))
 	}
 }
 
@@ -765,7 +839,10 @@ func main() {
 	flag.StringVar(&inputfile, "input", "input.txt", "input file")
 	flag.BoolVar(&test, "test", false, "input file")
 	flag.Parse()
-	g := &Game{}
+	g := &Game{
+		camScale:   1.0,
+		camScaleTo: 1.0,
+	}
 
 	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
 	ebiten.SetWindowTitle("Advent Of Code 2025 - day9 part2")
