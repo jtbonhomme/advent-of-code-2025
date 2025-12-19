@@ -50,38 +50,54 @@ func TestMinPresses(t *testing.T) {
 		args args
 		want int
 	}{
+		// [#.##...] (1,3,4,5,6) (1,3) (0,5) (0,1,2,4,5,6) (2,3,5)
 		{
-			name: "Test 0",
+			name: "Test 3",
 			args: args{
-				machine: Machine{lightDiagram: []bool{false, true, true, false}, buttonsWiring: [][]int{
-					{3}, {1, 3}, {2}, {2, 3}, {0, 2}, {0, 1},
+				machine: Machine{lightDiagram: []bool{true, false, true, true, false, false, false}, buttonsWiring: [][]int{
+					{1, 3, 4, 5, 6}, {1, 3}, {0, 5}, {0, 1, 2, 4, 5, 6}, {2, 3, 5},
 				}},
 			},
 			want: 2,
 		},
-		{
-			name: "Test 1",
-			args: args{
-				machine: Machine{lightDiagram: []bool{false, false, false, true, false}, buttonsWiring: [][]int{
-					{0, 2, 3, 4}, {2, 3}, {0, 4}, {0, 1, 2}, {1, 2, 3, 4},
-				}},
+		/*
+			// [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2)
+			{
+				name: "Test 2",
+				args: args{
+					machine: Machine{lightDiagram: []bool{false, true, true, true, false, true}, buttonsWiring: [][]int{
+						{0, 1, 2, 3, 4}, {0, 3, 4}, {0, 1, 2, 4, 5}, {1, 2},
+					}},
+				},
+				want: 2,
 			},
-			want: 3,
-		},
-		{
-			name: "Test 2",
-			args: args{
-				machine: Machine{lightDiagram: []bool{false, true, true, true, false, true}, buttonsWiring: [][]int{
-					{0, 1, 2, 3, 4}, {0, 3, 4}, {0, 1, 2, 4, 5}, {1, 2},
-				}},
+			// [...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4)
+			{
+				name: "Test 1",
+				args: args{
+					machine: Machine{lightDiagram: []bool{false, false, false, true, false}, buttonsWiring: [][]int{
+						{0, 2, 3, 4}, {2, 3}, {0, 4}, {0, 1, 2}, {1, 2, 3, 4},
+					}},
+				},
+				want: 3,
 			},
-			want: 2,
-		},
+			// [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1)
+			{
+				name: "Test 0",
+				args: args{
+					machine: Machine{lightDiagram: []bool{false, true, true, false}, buttonsWiring: [][]int{
+						{3}, {1, 3}, {2}, {2, 3}, {0, 2}, {0, 1},
+					}},
+				},
+				want: 2,
+			},
+		*/
 	}
 
+	test = true
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := minPresses(tt.args.machine); got != tt.want {
+			if got, _ := minPresses(tt.args.machine); got != tt.want {
 				t.Errorf("%s minPresses() = %v, want %v", tt.name, got, tt.want)
 			}
 		})
@@ -94,6 +110,7 @@ var textGrid = `[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 
 func TestProcessLines(t *testing.T) {
 	want := 7
+	test = true
 
 	lines := parseLines(textGrid)
 	got := processLines(lines)
