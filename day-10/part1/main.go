@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"slices"
+	"time"
 
 	//    "regexp"
 	//    "strconv"
@@ -55,6 +56,7 @@ func (ld LightDiagram) String() string {
 type Machine struct {
 	lightDiagram  LightDiagram
 	buttonsWiring [][]int
+	minPresses    int
 }
 
 // Parse a single line of input
@@ -68,7 +70,7 @@ func parseLine(line string) Machine {
 	//split line into parts
 	parts := strings.Fields(line)
 	if len(parts) < 3 {
-		return Machine{lightDiagram, buttonsWiring}
+		return Machine{lightDiagram, buttonsWiring, -1}
 	}
 
 	//parse light diagram
@@ -106,7 +108,7 @@ func parseLine(line string) Machine {
 		buttonsWiring = append(buttonsWiring, buttonWire)
 	}
 
-	return Machine{lightDiagram, buttonsWiring}
+	return Machine{lightDiagram, buttonsWiring, len(buttonsWiring) * len(buttonsWiring)}
 }
 
 func parseLines(i string) []Machine {
@@ -133,7 +135,7 @@ func applyButtonPress(currentLights LightDiagram, buttonWire []int) LightDiagram
 	return newLights
 }
 
-func buildStateTree(lights LightDiagram, machine Machine, buttonWiringIndexes []int, steps int) (int, bool) {
+func (machine *Machine) buildStateTree(lights LightDiagram, buttonWiringIndexes []int, steps int) (int, bool) {
 	if lights.IsNull() && steps > 0 {
 		return steps, false
 	}
@@ -151,37 +153,36 @@ func buildStateTree(lights LightDiagram, machine Machine, buttonWiringIndexes []
 		// Apply button wire to initialize
 		newLights := applyButtonPress(lights, buttonWire)
 		if utils.EqualSlices(lights, machine.lightDiagram) {
+			debug("found solution %v with steps=%d\n", buttonWiringIndexes, steps)
 			return steps, true
 		}
 
-		totalSteps, ok = buildStateTree(newLights, machine, append(buttonWiringIndexes, i), steps+1)
-		if ok && totalSteps < minStepsGlobal {
-			minStepsGlobal = totalSteps
+		totalSteps, ok = machine.buildStateTree(newLights, append(buttonWiringIndexes, i), steps+1)
+		if ok && totalSteps < machine.minPresses {
+			machine.minPresses = totalSteps
 		}
 	}
 
 	return totalSteps, ok
 }
 
-var minStepsGlobal int = -1
-
 func minPresses(machine Machine) int {
 	// Build a tree starting with no button pressed
 	// then apply all combinations of button presses
 	// until the light diagram matches the target or returns to initial state (no buttons pressed)
-	minStepsGlobal = len(machine.lightDiagram) * len(machine.buttonsWiring)
-	_, _ = buildStateTree(make(LightDiagram, len(machine.lightDiagram)), machine, []int{}, 0)
-	return minStepsGlobal
+	_, _ = machine.buildStateTree(make(LightDiagram, len(machine.lightDiagram)), []int{}, 0)
+	return machine.minPresses
 }
 
 func processLines(machines []Machine) int {
 	var result int
 
 	for i, machine := range machines {
+		start := time.Now()
 		// For now, just count the number of buttons
 		fmt.Printf("[%d] min presses = ", i)
 		minPresses := minPresses(machine)
-		fmt.Printf("%d\n", minPresses)
+		fmt.Printf("%d (took %v)\n", minPresses, time.Since(start))
 		result += minPresses
 	}
 
@@ -189,10 +190,12 @@ func processLines(machines []Machine) int {
 }
 
 func run(i string) int {
+	start := time.Now()
+	fmt.Printf("Parsing input...\n")
 	machines := parseLines(i)
 
 	answer := processLines(machines)
-
+	fmt.Printf("Completed in %v\n", time.Since(start))
 	return answer
 }
 

@@ -50,54 +50,70 @@ func TestMinPresses(t *testing.T) {
 		args args
 		want int
 	}{
+		// [..#.###.#.] (1,6,8) (1,2,3,4,6) (1,4,7,8) (1,2,3,4,5,6,9) (6,7,9) (1,2,3,5,6,8,9) (0,1,3,5,8,9) (0,1,2,4,5,8,9) (5,6,8,9) (0,9) (1,2) (2,4,5,7) (1,3,4,5,7,8,9) {29,286,259,227,83,256,242,61,260,263}
+		{
+			name: "Test 4",
+			args: args{
+				machine: Machine{lightDiagram: []bool{false, false, true, false, true, true, true, false, true, false}, buttonsWiring: [][]int{
+					{1, 6, 8}, {1, 2, 3, 4, 6}, {1, 4, 7, 8}, {1, 2, 3, 4, 5, 6, 9}, {6, 7, 9},
+					{1, 2, 3, 5, 6, 8, 9}, {0, 1, 3, 5, 8, 9}, {0, 1, 2, 4, 5, 8, 9}, {5, 6, 8, 9},
+					{0, 9}, {1, 2}, {2, 4, 5, 7}, {1, 3, 4, 5, 7, 8, 9},
+				},
+					minPresses: 10000,
+				}},
+			want: 5,
+		},
 		// [#.##...] (1,3,4,5,6) (1,3) (0,5) (0,1,2,4,5,6) (2,3,5)
 		{
 			name: "Test 3",
 			args: args{
 				machine: Machine{lightDiagram: []bool{true, false, true, true, false, false, false}, buttonsWiring: [][]int{
 					{1, 3, 4, 5, 6}, {1, 3}, {0, 5}, {0, 1, 2, 4, 5, 6}, {2, 3, 5},
+				},
+					minPresses: 10000,
 				}},
-			},
 			want: 2,
 		},
-		/*
-			// [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2)
-			{
-				name: "Test 2",
-				args: args{
-					machine: Machine{lightDiagram: []bool{false, true, true, true, false, true}, buttonsWiring: [][]int{
-						{0, 1, 2, 3, 4}, {0, 3, 4}, {0, 1, 2, 4, 5}, {1, 2},
-					}},
+
+		// [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2)
+		{
+			name: "Test 2",
+			args: args{
+				machine: Machine{lightDiagram: []bool{false, true, true, true, false, true}, buttonsWiring: [][]int{
+					{0, 1, 2, 3, 4}, {0, 3, 4}, {0, 1, 2, 4, 5}, {1, 2},
 				},
-				want: 2,
-			},
-			// [...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4)
-			{
-				name: "Test 1",
-				args: args{
-					machine: Machine{lightDiagram: []bool{false, false, false, true, false}, buttonsWiring: [][]int{
-						{0, 2, 3, 4}, {2, 3}, {0, 4}, {0, 1, 2}, {1, 2, 3, 4},
-					}},
+					minPresses: 10000,
+				}},
+			want: 2,
+		},
+		// [...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4)
+		{
+			name: "Test 1",
+			args: args{
+				machine: Machine{lightDiagram: []bool{false, false, false, true, false}, buttonsWiring: [][]int{
+					{0, 2, 3, 4}, {2, 3}, {0, 4}, {0, 1, 2}, {1, 2, 3, 4},
 				},
-				want: 3,
-			},
-			// [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1)
-			{
-				name: "Test 0",
-				args: args{
-					machine: Machine{lightDiagram: []bool{false, true, true, false}, buttonsWiring: [][]int{
-						{3}, {1, 3}, {2}, {2, 3}, {0, 2}, {0, 1},
-					}},
+					minPresses: 10000,
+				}},
+			want: 3,
+		},
+		// [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1)
+		{
+			name: "Test 0",
+			args: args{
+				machine: Machine{lightDiagram: []bool{false, true, true, false}, buttonsWiring: [][]int{
+					{3}, {1, 3}, {2}, {2, 3}, {0, 2}, {0, 1},
 				},
-				want: 2,
-			},
-		*/
+					minPresses: 10000,
+				}},
+			want: 2,
+		},
 	}
 
 	test = true
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := minPresses(tt.args.machine); got != tt.want {
+			if got := minPresses(tt.args.machine); got != tt.want {
 				t.Errorf("%s minPresses() = %v, want %v", tt.name, got, tt.want)
 			}
 		})
