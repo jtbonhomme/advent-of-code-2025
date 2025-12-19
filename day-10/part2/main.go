@@ -190,6 +190,55 @@ func displayAction(pressedButtons []int, newJoltage Joltage, machine Machine) {
 // Build a tree of all combinations of button presses that satisfy the current position, then for each leaf node, continue to the next position until all positions are satisfied.
 // Keep track of the minimum number of presses found.
 func (machine *Machine) getMinPresses() {
+	rankedJoltagesIndexes := make([]int, len(machine.joltage))
+	for i := range machine.joltage {
+		rankedJoltagesIndexes[i] = i
+	}
+
+	// Rank joltage index of the machine in joltest descending order (bubble sort for simplicity)
+	for i := 0; i < len(rankedJoltagesIndexes)-1; i++ {
+		for j := 0; j < len(rankedJoltagesIndexes)-i-1; j++ {
+			if machine.joltage[rankedJoltagesIndexes[j]] < machine.joltage[rankedJoltagesIndexes[j+1]] {
+				// swap
+				rankedJoltagesIndexes[j], rankedJoltagesIndexes[j+1] = rankedJoltagesIndexes[j+1], rankedJoltagesIndexes[j]
+			}
+		}
+	}
+
+	debug("Ranked joltage indexes: %v\n", rankedJoltagesIndexes)
+
+	actionsCombinatory := make([][]int, 0)
+	for _, index := range rankedJoltagesIndexes {
+		debug("Processing position %d (target joltage %d)\n", index, machine.joltage[index])
+		// find all button presses combianatory that satisfy position index
+		// without overpassing other positions' joltage needs
+		// For now, just try a naive approach: press each button once and see if it helps
+		targetJoltage := machine.joltage[index]
+		presses := 0
+		actions := make([]int, len(machine.buttonsWiring))
+
+		var combine func(int, int, []int)
+		combine = func(joltageLeft, pos int, actions []int) {
+			// there is only one button left to press
+			if pos == len(machine.buttonsWiring)-1 {
+				actions[pos] += joltageLeft
+				return
+			}
+
+			for j := 0; j < joltageLeft; j++ {
+				// we pres the button at pos "pos" j times
+				actions[pos] = j
+				presses += j
+				// and move to the next button
+				combine(joltageLeft-j, pos+1, actions)
+			}
+		}
+
+		combine(targetJoltage, 0, actions)
+		actionsCombinatory = append(actionsCombinatory, actions)
+		debug("Actions combinatory for position %d: %v\n", index, actionsCombinatory)
+	}
+
 	actions := make([]int, len(machine.buttonsWiring))
 	currentJoltage := make(Joltage, len(machine.joltage))
 	newJoltage := make(Joltage, len(currentJoltage))
