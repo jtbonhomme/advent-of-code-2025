@@ -114,7 +114,7 @@ func TestMinPresses(t *testing.T) {
 				},
 					minPresses: 10000,
 				}},
-			want: 2,
+			want: 10,
 		},
 	}
 

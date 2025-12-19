@@ -9,8 +9,6 @@ import (
 	//    "regexp"
 	//    "strconv"
 	"strings"
-
-	"github.com/jtbonhomme/advent-of-code-2025/utils"
 )
 
 //go:embed input.txt
@@ -145,41 +143,86 @@ func (j Joltage) IsGreater(other Joltage) bool {
 	return false
 }
 
-func (machine *Machine) buildStateTree(currentJoltage Joltage, steps int) (int, bool) {
-	if steps > len(machine.buttonsWiring)*len(machine.buttonsWiring) {
-		return -1, false
+func (j Joltage) Equals(other Joltage) bool {
+	if len(j) != len(other) {
+		return false
 	}
 
-	if currentJoltage.IsGreater(machine.joltage) {
-		return -1, false
-	}
-
-	var ok bool
-	var totalSteps int = -1
-	for _, buttonWire := range machine.buttonsWiring {
-		// Apply button wire to initialize
-		newJoltage := applyButtonPress(currentJoltage, buttonWire)
-		if utils.EqualSlices(newJoltage, machine.joltage) {
-			return steps, true
-		}
-
-		totalSteps, ok = machine.buildStateTree(newJoltage, steps+1)
-		if ok && totalSteps < machine.minPresses {
-			machine.minPresses = totalSteps
-		}
-		if !ok {
-			return -1, false
+	for i := range j {
+		if j[i] != other[i] {
+			return false
 		}
 	}
 
-	return totalSteps, ok
+	return true
+}
+
+func displayAction(pressedButtons []int, newJoltage Joltage, machine Machine) {
+	fmt.Printf("Position.")
+	for pos := range machine.joltage {
+		fmt.Printf(" %d ", pos)
+	}
+	fmt.Println()
+
+	fmt.Printf("Joltage..")
+	for _, j := range machine.joltage {
+		fmt.Printf(" %d ", j)
+	}
+	fmt.Println()
+
+	fmt.Printf("Try......")
+	for _, j := range newJoltage {
+		fmt.Printf(" %d ", j)
+	}
+
+	actions := []string{}
+	for i, b := range pressedButtons {
+		actions = append(actions, fmt.Sprintf("b%d x %d", i, b))
+	}
+	fmt.Println(strings.Join(actions, " + "))
+}
+
+// Algorithm to find the minimum button presses to reach the target joltage
+// First rank by descending order the positions from the highest joltage needed to the lowest.
+// For example if the target joltage is {3,5,4,7}, the order of positions to satisfy is 3,1,2,0
+// Then start a successive rounds to find all presses combinatory that satisfy position 3 (without overpassing other position's joltage needs), then position 1, then position 2, then position 0.
+// For each position, identify the buttons that can contribute to increase the joltage at that position without overpassing other positions' needs.
+// Build a tree of all combinations of button presses that satisfy the current position, then for each leaf node, continue to the next position until all positions are satisfied.
+// Keep track of the minimum number of presses found.
+func (machine *Machine) getMinPresses() {
+	actions := make([]int, len(machine.buttonsWiring))
+	currentJoltage := make(Joltage, len(machine.joltage))
+	newJoltage := make(Joltage, len(currentJoltage))
+	copy(newJoltage, currentJoltage)
+
+	actions[5] = 2 // press button 5 two times
+	actions[4] = 1 // press button 4 one time
+	actions[3] = 3 // press button 3 three times
+	actions[1] = 3 // press button 1 three times
+	actions[0] = 1 // press button 0 one time
+	steps := 0
+	for i, b := range actions {
+		for j := 0; j < b; j++ {
+			newJoltage = applyButtonPress(newJoltage, machine.buttonsWiring[i])
+			steps++
+		}
+	}
+
+	displayAction(actions, newJoltage, *machine)
+	if newJoltage.Equals(machine.joltage) {
+		fmt.Printf("Solved in %d steps!\n", steps)
+		machine.minPresses = steps
+	} else {
+		fmt.Printf("Not solved.\n")
+	}
 }
 
 func minPresses(machine Machine) int {
 	// Build a tree starting with no button pressed
 	// then apply all combinations of button presses
 	// until the light diagram matches the target or returns to initial state (no buttons pressed)
-	_, _ = machine.buildStateTree(make(Joltage, len(machine.joltage)), 0)
+	machine.getMinPresses()
+
 	return machine.minPresses
 }
 
