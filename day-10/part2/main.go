@@ -4,6 +4,7 @@ import (
 	"bufio"
 	_ "embed"
 	"fmt"
+	"slices"
 	"time"
 
 	//    "regexp"
@@ -177,9 +178,21 @@ func displayAction(pressedButtons []int, newJoltage Joltage, machine Machine) {
 
 	actions := []string{}
 	for i, b := range pressedButtons {
-		actions = append(actions, fmt.Sprintf("b%d x %d", i, b))
+		actions = append(actions, fmt.Sprintf("b%d %v x %d", i, machine.buttonsWiring[i], b))
 	}
 	fmt.Println(strings.Join(actions, " + "))
+}
+
+func (machine *Machine) getButtonsForJoltagePosition(position int) []int {
+	buttons := []int{}
+
+	for i, buttonWire := range machine.buttonsWiring {
+		if slices.Contains(buttonWire, position) {
+			buttons = append(buttons, i)
+		}
+	}
+
+	return buttons
 }
 
 // Algorithm to find the minimum button presses to reach the target joltage
@@ -217,21 +230,50 @@ func (machine *Machine) getMinPresses() {
 		presses := 0
 		actions := make([]int, len(machine.buttonsWiring))
 
-		var combine func(int, int, []int)
-		combine = func(joltageLeft, pos int, actions []int) {
+		buttonsForPos := machine.getButtonsForJoltagePosition(index)
+		debug("** Buttons that can contribute to position %d: %v\n", index, buttonsForPos)
+
+		var combine func(int, int, []int) bool
+		combine = func(joltageLeft, pos int, actions []int) bool {
+			var stop bool
+
 			// there is only one button left to press
 			if pos == len(machine.buttonsWiring)-1 {
-				actions[pos] += joltageLeft
-				return
+				buttonWire := machine.buttonsWiring[pos]
+				if slices.Contains(buttonWire, index) {
+					debug("\t[%d] Only one button left to press at pos %d %v for joltage left %d\n", pos, pos, buttonWire, joltageLeft)
+					actions[pos] += joltageLeft
+				} else {
+					debug("\t[%d] Button at pos %d %v does not contribute to position %d, skip it\n", pos, pos, buttonWire, index)
+				}
+				debug("\t==> Actions so far: %v\n", actions)
+				return true
 			}
 
-			for j := 0; j < joltageLeft; j++ {
-				// we pres the button at pos "pos" j times
-				actions[pos] = j
-				presses += j
-				// and move to the next button
-				combine(joltageLeft-j, pos+1, actions)
+			if joltageLeft <= 0 {
+				debug("\t[%d] No joltage left to distribute, actions so far: %v\n", pos, actions)
+				return true
 			}
+
+			for j := joltageLeft; j >= 0; j-- {
+				// if this button contributes to the current position
+				buttonWire := machine.buttonsWiring[pos]
+				if slices.Contains(buttonWire, index) {
+					debug("\t[%d] How many times to press button at pos %d %v for joltage left %d: trying %d times\n", pos, pos, buttonWire, joltageLeft, j)
+					// press the button at pos "pos" j times
+					actions[pos] = j
+					presses += j
+				} else {
+					debug("\t[%d] Button at pos %d %v does not contribute to position %d, skip it\n", pos, pos, buttonWire, index)
+				}
+				// and move to the next button
+				stop = combine(joltageLeft-j, pos+1, actions)
+				if stop {
+					continue
+				}
+			}
+
+			return false
 		}
 
 		combine(targetJoltage, 0, actions)
